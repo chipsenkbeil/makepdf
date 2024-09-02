@@ -28,6 +28,45 @@ const BANNER_TEXT_COLOR: Color = Color::Rgb(Rgb {
 const REGULAR_FONT: &[u8] = include_bytes!("../fonts/JetBrainsMono-Regular.ttf");
 const BOLD_FONT: &[u8] = include_bytes!("../fonts/JetBrainsMono-Bold.ttf");
 
+enum BoxSize {
+    /// Entire row in width
+    Full,
+    /// Left half of row in width
+    Left,
+    /// Right half of row in width
+    Right,
+    /// Custom position and size, overwriting previous calculations
+    Custom {
+        /// Lower-left x position
+        x: Mm,
+        /// Lower-left y position
+        y: Mm,
+        /// Width of the box
+        width: Mm,
+        /// Height of the box
+        height: Mm,
+    },
+}
+
+struct BoxPadding {
+    top: Mm,
+    left: Mm,
+    right: Mm,
+    bottom: Mm,
+}
+
+impl BoxPadding {
+    pub fn all(padding: impl Into<Mm>) -> Self {
+        let padding = padding.into();
+        Self {
+            top: padding,
+            left: padding,
+            right: padding,
+            bottom: padding,
+        }
+    }
+}
+
 fn main() {
     let doc = PdfDocument::empty("Beatrix Planner 2024");
     let owned_face = OwnedFace::from_vec(REGULAR_FONT.to_vec(), 0).unwrap();
@@ -79,14 +118,56 @@ fn make_daily_page_1(
 
     {
         let layer = doc.get_page(page).get_layer(layer);
-        // Row 0, date is calculated
-        draw_full_width_banner(&layer, 1, font, face, "MORNING REVIEW");
-        // Row 2, split column left/right with padding
+        draw_box(
+            &layer,
+            0,
+            font,
+            face,
+            "DATE REVIEW",
+            BoxSize::Left,
+            BoxPadding::all(Mm(1.0)),
+        );
+        // Row 0, date calculated on the right
+        draw_box(
+            &layer,
+            1,
+            font,
+            face,
+            "MORNING REVIEW",
+            BoxSize::Full,
+            BoxPadding::all(Mm(1.0)),
+        );
+        draw_box(
+            &layer,
+            2,
+            font,
+            face,
+            "I'M GRATEFUL FOR",
+            BoxSize::Left,
+            BoxPadding::all(Mm(1.0)),
+        );
+        draw_box(
+            &layer,
+            2,
+            font,
+            face,
+            "I'M EXCITED ABOUT",
+            BoxSize::Right,
+            BoxPadding::all(Mm(1.0)),
+        );
         // Row 3-8, lines with numbers
         // Row 9-10, affirmation
         // Row 11-12, focus/exercise
         // Row 13-16, priorities
-        draw_full_width_banner(&layer, 17, font, face, "END OF DAY REVIEW");
+        draw_box(
+            &layer,
+            17,
+            font,
+            face,
+            "END OF DAY REVIEW",
+            BoxSize::Full,
+            BoxPadding::all(Mm(1.0)),
+        );
         // Row 18, today's wins
         // Row 19-21, lines with numbers
         // Row 22, how I'll improve
@@ -107,20 +188,46 @@ fn make_daily_page_2(
 
 /// Draws a banner that is the full width of the page at row N that has text vertically and
 /// horizontally centered within it.
-fn draw_full_width_banner(
+fn draw_box(
     layer: &PdfLayerReference,
     row: usize,
     font: &IndirectFontRef,
     face: &Face<'_>,
     text: &str,
+    size: BoxSize,
+    padding: impl Into<Option<BoxPadding>>,
 ) {
+    let padding = padding.into();
+
     // Define the rectangular region which uses a lower-left x/y and an upper-right x/y
     //
     // We apply a row (index 0) to figure out where to place evenly within a page
-    let llx = Mm(0.0);
-    let lly = PAGE_HEIGHT - (BANNER_HEIGHT * (row + 1) as f32);
-    let urx = PAGE_WIDTH;
-    let ury = PAGE_HEIGHT - (BANNER_HEIGHT * row as f32);
+    let mut lly = PAGE_HEIGHT - (BANNER_HEIGHT * (row + 1) as f32);
+    let mut ury = PAGE_HEIGHT - (BANNER_HEIGHT * row as f32);
+
+    let (mut llx, mut urx) = match size {
+        BoxSize::Full => (Mm(0.0), PAGE_WIDTH),
+        BoxSize::Left => (Mm(0.0), PAGE_WIDTH / 2.0),
+        BoxSize::Right => (PAGE_WIDTH / 2.0, PAGE_WIDTH),
+        BoxSize::Custom {
+            x,
+            y,
+            width,
+            height,
+        } => {
+            lly = y;
+            ury = y + height;
+            (x, x + width)
+        }
+    };
+
+    // Calculate the padding
+    if let Some(padding) = padding {
+        lly += padding.bottom;
+        ury -= padding.top;
+        llx += padding.left;
+        urx -= padding.right;
+    }
 
     layer.set_fill_color(BANNER_BACKGROUND_COLOR);
     layer.set_outline_color(BANNER_BACKGROUND_COLOR);
@@ -134,13 +241,14 @@ fn draw_full_width_banner(
 
         // Calculate the middle of the banner and then shift over by half the text length to
         // place it roughly within the middle of the banner itself
-        let x = ((urx - llx) / 2.0) - Mm(text_width / 2.0);
+        let x = llx + ((urx - llx) / 2.0) - Mm(text_width / 2.0);
 
         // Calculate the space remaining from height of text and move up to vertically center
         // TODO: We calculate hard-coded padding at the bottom using text height because I
         //       cannot figure out how to determine the actual space to add since the font
         //       has some padding below or something. This is weird and I don't care anymore!
-        let y = lly + Mm(text_height * 0.125);
+        //let y = lly + Mm(text_height * 0.125);
+        let y = lly;
 
         layer.set_fill_color(BANNER_TEXT_COLOR);
         layer.set_outline_color(BANNER_TEXT_COLOR);
