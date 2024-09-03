@@ -174,6 +174,20 @@ fn make_daily_page_1(
             .with_padding(2.5)
             .draw(&ctx);
         // Row 23, lines with numbers
+        //
+        layer.add_link_annotation(LinkAnnotation::new(
+            PdfBox::new()
+                .at_row(0)
+                .shift_quarter_right()
+                .with_three_quarters_width()
+                .with_text(format!("{}", today.format("%A, %-d %B, %C%y (WK%W)")))
+                .with_padding(2.5)
+                .bounds_rect(),
+            None,
+            None,
+            Actions::uri("https://example.com/".to_string()),
+            None,
+        ));
     }
 
     (page, layer)

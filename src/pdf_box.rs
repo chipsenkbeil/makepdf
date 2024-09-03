@@ -130,7 +130,9 @@ impl PdfBox {
         self
     }
 
-    pub fn draw(&self, ctx: &Context<'_>) {
+    /// Returns bounds of box in form of
+    /// (lower-left x, lower-left y, upper-right x, upper-right y).
+    pub fn bounds(&self) -> (Mm, Mm, Mm, Mm) {
         let mut llx = self.rect.x;
         let mut lly = self.rect.y;
         let mut urx = self.rect.x + self.rect.width;
@@ -143,6 +145,17 @@ impl PdfBox {
             llx += padding.left;
             urx -= padding.right;
         }
+
+        (llx, lly, urx, ury)
+    }
+
+    pub fn bounds_rect(&self) -> Rect {
+        let (llx, lly, urx, ury) = self.bounds();
+        Rect::new(llx, lly, urx, ury)
+    }
+
+    pub fn draw(&self, ctx: &Context<'_>) {
+        let (llx, lly, urx, ury) = self.bounds();
 
         ctx.layer.set_fill_color(self.background.clone());
         ctx.layer.set_outline_color(self.background.clone());
