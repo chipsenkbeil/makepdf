@@ -59,45 +59,58 @@ impl PdfBox {
         self
     }
 
-    pub fn full_width(&mut self) -> &mut Self {
-        self.rect.x = Mm(0.0);
+    pub fn with_full_width(&mut self) -> &mut Self {
         self.rect.width = PAGE_WIDTH;
         self
     }
 
-    pub fn on_left_half(&mut self) -> &mut Self {
-        self.rect.x = Mm(0.0);
-        self.rect.width = PAGE_WIDTH / 2.0;
-        self
-    }
-
-    pub fn on_left_quarter(&mut self) -> &mut Self {
-        self.rect.x = Mm(0.0);
-        self.rect.width = PAGE_WIDTH / 4.0;
-        self
-    }
-
-    pub fn on_right_half(&mut self) -> &mut Self {
-        self.rect.x = PAGE_WIDTH / 2.0;
-        self.rect.width = PAGE_WIDTH / 2.0;
-        self
-    }
-
-    pub fn on_right_three_quarters(&mut self) -> &mut Self {
-        self.rect.x = PAGE_WIDTH / 4.0;
+    pub fn with_three_quarters_width(&mut self) -> &mut Self {
         self.rect.width = PAGE_WIDTH * 3.0 / 4.0;
         self
     }
 
-    pub fn on_right_third_quarter(&mut self) -> &mut Self {
-        self.rect.x = PAGE_WIDTH / 2.0;
+    pub fn with_half_width(&mut self) -> &mut Self {
+        self.rect.width = PAGE_WIDTH / 2.0;
+        self
+    }
+
+    pub fn with_quarter_width(&mut self) -> &mut Self {
         self.rect.width = PAGE_WIDTH / 4.0;
         self
     }
 
-    pub fn on_middle_half(&mut self) -> &mut Self {
-        self.rect.x = PAGE_WIDTH / 4.0;
-        self.rect.width = PAGE_WIDTH / 2.0;
+    pub fn with_eighth_width(&mut self) -> &mut Self {
+        self.rect.width = PAGE_WIDTH / 8.0;
+        self
+    }
+
+    pub fn shift_three_quarters_right(&mut self) -> &mut Self {
+        self.shift_half_right();
+        self.shift_quarter_right();
+        self
+    }
+
+    pub fn shift_half_right(&mut self) -> &mut Self {
+        self.shift_quarter_right();
+        self.shift_quarter_right();
+        self
+    }
+
+    pub fn shift_quarter_right(&mut self) -> &mut Self {
+        self.shift_eighth_right();
+        self.shift_eighth_right();
+        self
+    }
+
+    pub fn shift_eighth_right(&mut self) -> &mut Self {
+        self.rect.x += PAGE_WIDTH / 8.0;
+        self
+    }
+
+    /// Columns are up to 8 with `col` being zero-indexed.
+    pub fn at_col(&mut self, col: usize) -> &mut Self {
+        let col = col as f32;
+        self.rect.x = Mm(col * (PAGE_WIDTH.0 / 8.0));
         self
     }
 
