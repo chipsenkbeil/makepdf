@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use owned_ttf_parser::{AsFaceRef, Face, OwnedFace};
 use printpdf::*;
 use std::fs::File;
@@ -68,26 +69,37 @@ fn make_daily_page_1(
             layer: &layer,
         };
 
+        let today = NaiveDate::from_ymd_opt(2024, 9, 30).unwrap();
+
         PdfBox::new()
             .at_row(0)
-            .on_left()
+            .on_left_quarter()
             .with_text("DATE REVIEW")
+            .with_padding(2.5)
             .draw(&ctx);
-        // Row 0, date calculated on the right
+        PdfBox::new()
+            .at_row(0)
+            .on_right_three_quarters()
+            .with_text(format!("{}", today.format("%A, %-d %B, %C%y")))
+            .with_padding(2.5)
+            .draw(&ctx);
         PdfBox::new()
             .at_row(1)
             .full_width()
             .with_text("MORNING REVIEW")
+            .with_padding(2.5)
             .draw(&ctx);
         PdfBox::new()
             .at_row(2)
-            .on_left()
+            .on_left_half()
             .with_text("I'M GRATEFUL FOR")
+            .with_padding(2.5)
             .draw(&ctx);
         PdfBox::new()
             .at_row(2)
-            .on_right()
+            .on_right_half()
             .with_text("I'M EXCITED ABOUT")
+            .with_padding(2.5)
             .draw(&ctx);
         // Row 3-8, lines with numbers
         // Row 9-10, affirmation
@@ -97,6 +109,7 @@ fn make_daily_page_1(
             .at_row(17)
             .full_width()
             .with_text("END OF DAY REVIEW")
+            .with_padding(2.5)
             .draw(&ctx);
         // Row 18, today's wins
         // Row 19-21, lines with numbers

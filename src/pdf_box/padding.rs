@@ -8,6 +8,42 @@ pub struct Padding {
     pub bottom: Mm,
 }
 
+impl From<f32> for Padding {
+    fn from(padding: f32) -> Self {
+        Self::all(Mm(padding))
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Padding {
+    /// Converts a tuple of (top, left, right, bottom) into padding.
+    fn from((top, left, right, bottom): (f32, f32, f32, f32)) -> Self {
+        Self {
+            top: Mm(top),
+            left: Mm(left),
+            right: Mm(right),
+            bottom: Mm(bottom),
+        }
+    }
+}
+
+impl From<Mm> for Padding {
+    fn from(padding: Mm) -> Self {
+        Self::all(padding)
+    }
+}
+
+impl From<(Mm, Mm, Mm, Mm)> for Padding {
+    /// Converts a tuple of (top, left, right, bottom) into padding.
+    fn from((top, left, right, bottom): (Mm, Mm, Mm, Mm)) -> Self {
+        Self {
+            top,
+            left,
+            right,
+            bottom,
+        }
+    }
+}
+
 impl Padding {
     pub fn all(padding: impl Into<Mm>) -> Self {
         let padding = padding.into();

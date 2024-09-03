@@ -65,15 +65,27 @@ impl PdfBox {
         self
     }
 
-    pub fn on_left(&mut self) -> &mut Self {
+    pub fn on_left_half(&mut self) -> &mut Self {
         self.rect.x = Mm(0.0);
         self.rect.width = PAGE_WIDTH / 2.0;
         self
     }
 
-    pub fn on_right(&mut self) -> &mut Self {
+    pub fn on_left_quarter(&mut self) -> &mut Self {
+        self.rect.x = Mm(0.0);
+        self.rect.width = PAGE_WIDTH / 4.0;
+        self
+    }
+
+    pub fn on_right_half(&mut self) -> &mut Self {
         self.rect.x = PAGE_WIDTH / 2.0;
         self.rect.width = PAGE_WIDTH / 2.0;
+        self
+    }
+
+    pub fn on_right_three_quarters(&mut self) -> &mut Self {
+        self.rect.x = PAGE_WIDTH / 4.0;
+        self.rect.width = PAGE_WIDTH * 3.0 / 4.0;
         self
     }
 
