@@ -121,12 +121,13 @@ impl PdfBox {
             // place it roughly within the middle of the banner itself
             let x = llx + ((urx - llx) / 2.0) - Mm(text_width / 2.0);
 
-            // Calculate the space remaining from height of text and move up to vertically center
-            // TODO: We calculate hard-coded padding at the bottom using text height because I
-            //       cannot figure out how to determine the actual space to add since the font
-            //       has some padding below or something. This is weird and I don't care anymore!
-            //let y = lly + Mm(text_height * 0.125);
-            let y = lly;
+            // Calculate the space remaining from height of text and move up to vertically center.
+            // We do this by calculating the position vertically centered within the box and then
+            // moving down to account for a portion of the text's height.
+            //
+            // NOTE: I don't really understand this anymore. I was trying text_height / 2.0 and
+            //       that didn't work, but using a quarter of text height gets pretty close.
+            let y = lly + ((ury - lly) / 2.0) - Mm(text_height / 4.0);
 
             ctx.layer.set_fill_color(self.foreground.clone());
             ctx.layer.set_outline_color(self.foreground.clone());
