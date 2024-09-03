@@ -103,17 +103,69 @@ fn make_daily_page_1(
             .draw(&ctx);
         // Row 3-8, lines with numbers
         // Row 9-10, affirmation
+        PdfBox::new()
+            .at_row(9)
+            .on_left_quarter()
+            .with_text("AFFIRMATION")
+            .with_padding(2.5)
+            .draw(&ctx);
         // Row 11-12, focus/exercise
+        PdfBox::new()
+            .at_row(11)
+            .on_left_quarter()
+            .with_text("FOCUS")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(11)
+            .on_right_third_quarter()
+            .with_text("EXERCISE")
+            .with_padding(2.5)
+            .draw(&ctx);
         // Row 13-16, priorities
+        PdfBox::new()
+            .at_row(13)
+            .on_left_quarter()
+            .with_text("P1")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(13)
+            .on_right_third_quarter()
+            .with_text("P2")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(15)
+            .on_left_quarter()
+            .with_text("P3")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(15)
+            .on_right_third_quarter()
+            .with_text("P4")
+            .with_padding(2.5)
+            .draw(&ctx);
         PdfBox::new()
             .at_row(17)
             .full_width()
             .with_text("END OF DAY REVIEW")
             .with_padding(2.5)
             .draw(&ctx);
-        // Row 18, today's wins
+        PdfBox::new()
+            .at_row(18)
+            .on_middle_half()
+            .with_text("TODAY'S WINS")
+            .with_padding(2.5)
+            .draw(&ctx);
         // Row 19-21, lines with numbers
-        // Row 22, how I'll improve
+        PdfBox::new()
+            .at_row(22)
+            .on_middle_half()
+            .with_text("HOW I'LL IMPROVE")
+            .with_padding(2.5)
+            .draw(&ctx);
         // Row 23, lines with numbers
     }
 

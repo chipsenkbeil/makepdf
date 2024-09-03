@@ -89,6 +89,18 @@ impl PdfBox {
         self
     }
 
+    pub fn on_right_third_quarter(&mut self) -> &mut Self {
+        self.rect.x = PAGE_WIDTH / 2.0;
+        self.rect.width = PAGE_WIDTH / 4.0;
+        self
+    }
+
+    pub fn on_middle_half(&mut self) -> &mut Self {
+        self.rect.x = PAGE_WIDTH / 4.0;
+        self.rect.width = PAGE_WIDTH / 2.0;
+        self
+    }
+
     pub fn at_row(&mut self, row: usize) -> &mut Self {
         self.rect.y = PAGE_HEIGHT - (ROW_HEIGHT * (row + 1) as f32);
         self.rect.height = ROW_HEIGHT;
