@@ -16,7 +16,15 @@ fn main() {
     let doc = PdfDocument::empty("Beatrix Planner 2024");
     let owned_face = OwnedFace::from_vec(REGULAR_FONT.to_vec(), 0).unwrap();
     let font = doc.add_external_font(REGULAR_FONT).unwrap();
-    make_daily_page_1(&doc, &font, owned_face.as_face_ref());
+
+    let date = NaiveDate::from_ymd_opt(2024, 9, 28).unwrap();
+    make_daily_page_1(&doc, &font, owned_face.as_face_ref(), date);
+
+    let date = NaiveDate::from_ymd_opt(2024, 9, 29).unwrap();
+    make_daily_page_1(&doc, &font, owned_face.as_face_ref(), date);
+
+    let date = NaiveDate::from_ymd_opt(2024, 9, 30).unwrap();
+    make_daily_page_1(&doc, &font, owned_face.as_face_ref(), date);
 
     doc.save(&mut BufWriter::new(File::create("planner.pdf").unwrap()))
         .unwrap();
@@ -58,6 +66,7 @@ fn make_daily_page_1(
     doc: &PdfDocumentReference,
     font: &IndirectFontRef,
     face: &Face<'_>,
+    date: NaiveDate,
 ) -> (PdfPageIndex, PdfLayerIndex) {
     let (page, layer) = doc.add_page(PAGE_WIDTH, PAGE_HEIGHT, "");
 
@@ -69,8 +78,9 @@ fn make_daily_page_1(
             layer: &layer,
         };
 
-        let today = NaiveDate::from_ymd_opt(2024, 9, 30).unwrap();
-
+        //
+        // Date Marker
+        //
         PdfBox::new()
             .at_row(0)
             .with_quarter_width()
@@ -81,15 +91,23 @@ fn make_daily_page_1(
             .at_row(0)
             .shift_quarter_right()
             .with_three_quarters_width()
-            .with_text(format!("{}", today.format("%A, %-d %B, %C%y (WK%W)")))
+            .with_text(format!("{}", date.format("%A, %-d %B, %C%y (WK%W)")))
             .with_padding(2.5)
             .draw(&ctx);
+
+        //
+        // Morning Review
+        //
         PdfBox::new()
             .at_row(1)
             .with_full_width()
             .with_text("MORNING REVIEW")
             .with_padding(2.5)
             .draw(&ctx);
+
+        //
+        // Grateful/Excited For
+        //
         PdfBox::new()
             .at_row(2)
             .with_half_width()
@@ -103,15 +121,22 @@ fn make_daily_page_1(
             .with_text("I'M EXCITED ABOUT")
             .with_padding(2.5)
             .draw(&ctx);
+
         // Row 3-8, lines with numbers
-        // Row 9-10, affirmation
+
+        //
+        // Affirmation
+        //
         PdfBox::new()
             .at_row(9)
             .with_quarter_width()
             .with_text("AFFIRMATION")
             .with_padding(2.5)
             .draw(&ctx);
-        // Row 11-12, focus/exercise
+
+        //
+        // Focus & Exercise
+        //
         PdfBox::new()
             .at_row(11)
             .with_quarter_width()
@@ -125,7 +150,10 @@ fn make_daily_page_1(
             .with_text("EXERCISE")
             .with_padding(2.5)
             .draw(&ctx);
-        // Row 13-16, priorities
+
+        //
+        // Priorities
+        //
         PdfBox::new()
             .at_row(13)
             .with_eighth_width()
@@ -152,12 +180,20 @@ fn make_daily_page_1(
             .with_text("P4")
             .with_padding(2.5)
             .draw(&ctx);
+
+        //
+        // End of Day Review
+        //
         PdfBox::new()
             .at_row(17)
             .with_full_width()
             .with_text("END OF DAY REVIEW")
             .with_padding(2.5)
             .draw(&ctx);
+
+        //
+        // Today's Wins
+        //
         PdfBox::new()
             .at_row(18)
             .shift_quarter_right()
@@ -165,7 +201,30 @@ fn make_daily_page_1(
             .with_text("TODAY'S WINS")
             .with_padding(2.5)
             .draw(&ctx);
+
         // Row 19-21, lines with numbers
+        PdfBox::new()
+            .at_row(19)
+            .with_sixteenth_width()
+            .with_text("1")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(20)
+            .with_sixteenth_width()
+            .with_text("2")
+            .with_padding(2.5)
+            .draw(&ctx);
+        PdfBox::new()
+            .at_row(21)
+            .with_sixteenth_width()
+            .with_text("3")
+            .with_padding(2.5)
+            .draw(&ctx);
+
+        //
+        // How I'll Improve
+        //
         PdfBox::new()
             .at_row(22)
             .shift_quarter_right()
@@ -173,19 +232,27 @@ fn make_daily_page_1(
             .with_text("HOW I'LL IMPROVE")
             .with_padding(2.5)
             .draw(&ctx);
+
         // Row 23, lines with numbers
+        PdfBox::new()
+            .at_row(23)
+            .with_sixteenth_width()
+            .with_text("1")
+            .with_padding(2.5)
+            .draw(&ctx);
+
         //
         layer.add_link_annotation(LinkAnnotation::new(
             PdfBox::new()
                 .at_row(0)
                 .shift_quarter_right()
                 .with_three_quarters_width()
-                .with_text(format!("{}", today.format("%A, %-d %B, %C%y (WK%W)")))
+                .with_text(format!("{}", date.format("%A, %-d %B, %C%y (WK%W)")))
                 .with_padding(2.5)
                 .bounds_rect(),
             None,
             None,
-            Actions::uri("https://example.com/".to_string()),
+            Actions::uri("#page=2".to_string()),
             None,
         ));
     }

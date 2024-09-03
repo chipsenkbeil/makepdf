@@ -84,6 +84,11 @@ impl PdfBox {
         self
     }
 
+    pub fn with_sixteenth_width(&mut self) -> &mut Self {
+        self.rect.width = PAGE_WIDTH / 16.0;
+        self
+    }
+
     pub fn shift_three_quarters_right(&mut self) -> &mut Self {
         self.shift_half_right();
         self.shift_quarter_right();
