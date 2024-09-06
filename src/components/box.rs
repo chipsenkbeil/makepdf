@@ -1,35 +1,34 @@
+use crate::components::{Component, Context, Padding, Rect};
 use crate::constants::*;
-use crate::context::Context;
 use owned_ttf_parser::Face;
-use printpdf::*;
-
-mod padding;
-mod rect;
+use printpdf::{Actions, Color, GlyphMetrics, LinkAnnotation, Mm};
 
 #[derive(Clone, Debug)]
-pub struct PdfBox {
+pub struct BoxComponent {
     background: Color,
     foreground: Color,
-    padding: Option<padding::Padding>,
-    rect: rect::Rect,
+    padding: Option<Padding>,
+    rect: Rect,
     text: String,
     text_size: f32,
+    action: Option<Actions>,
 }
 
-impl Default for PdfBox {
+impl Default for BoxComponent {
     fn default() -> Self {
         Self {
             background: BANNER_BACKGROUND_COLOR,
             foreground: BANNER_TEXT_COLOR,
             padding: None,
-            rect: rect::Rect::default(),
+            rect: Rect::default(),
             text: String::default(),
             text_size: 36.0,
+            action: None,
         }
     }
 }
 
-impl PdfBox {
+impl BoxComponent {
     pub fn new() -> Self {
         Self::default()
     }
@@ -44,7 +43,7 @@ impl PdfBox {
         self
     }
 
-    pub fn with_padding(&mut self, padding: impl Into<padding::Padding>) -> &mut Self {
+    pub fn with_padding(&mut self, padding: impl Into<Padding>) -> &mut Self {
         self.padding = Some(padding.into());
         self
     }
@@ -54,7 +53,7 @@ impl PdfBox {
         self
     }
 
-    pub fn with_rect(&mut self, rect: impl Into<rect::Rect>) -> &mut Self {
+    pub fn with_rect(&mut self, rect: impl Into<Rect>) -> &mut Self {
         self.rect = rect.into();
         self
     }
@@ -135,6 +134,16 @@ impl PdfBox {
         self
     }
 
+    pub fn with_action(&mut self, action: impl Into<Actions>) -> &mut Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    pub fn with_no_action(&mut self) -> &mut Self {
+        self.action = None;
+        self
+    }
+
     /// Returns bounds of box in form of
     /// (lower-left x, lower-left y, upper-right x, upper-right y).
     pub fn bounds(&self) -> (Mm, Mm, Mm, Mm) {
@@ -154,17 +163,33 @@ impl PdfBox {
         (llx, lly, urx, ury)
     }
 
-    pub fn bounds_rect(&self) -> Rect {
+    pub fn bounds_rect(&self) -> printpdf::Rect {
         let (llx, lly, urx, ury) = self.bounds();
-        Rect::new(llx, lly, urx, ury)
+        printpdf::Rect::new(llx, lly, urx, ury)
     }
+}
 
-    pub fn draw(&self, ctx: &Context<'_>) {
+impl Component for BoxComponent {
+    fn draw(&self, ctx: &Context<'_>) {
         let (llx, lly, urx, ury) = self.bounds();
 
         ctx.layer.set_fill_color(self.background.clone());
         ctx.layer.set_outline_color(self.background.clone());
-        ctx.layer.add_rect(Rect::new(llx, lly, urx, ury));
+        ctx.layer.add_rect(self.bounds_rect());
+
+        // If we have an action associated (for a link), create a new annotation
+        //
+        // NOTE: Components should only be drawn once, so we don't need to worry
+        //       about the annotation being added multiple times.
+        if let Some(action) = self.action.clone() {
+            ctx.layer.add_link_annotation(LinkAnnotation::new(
+                self.bounds_rect(),
+                None,
+                None,
+                action,
+                None,
+            ));
+        }
 
         // If given text, we'll populate within the middle of the banner
         if !self.text.is_empty() {

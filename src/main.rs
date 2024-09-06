@@ -1,13 +1,11 @@
 use std::fs::File;
 use std::io::BufWriter;
 
+mod components;
 mod constants;
-mod context;
-mod pdf_box;
 mod planner;
 
-use context::Context;
-pub use pdf_box::PdfBox;
+pub use components::*;
 pub use planner::PdfPlanner;
 
 fn main() {

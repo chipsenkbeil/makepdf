@@ -2,7 +2,7 @@ use chrono::{Datelike, Month, NaiveDate};
 use owned_ttf_parser::AsFaceRef;
 use printpdf::*;
 
-use crate::{Context, PdfBox, PdfPlanner};
+use crate::{BoxComponent, Component, Context, PdfPlanner};
 
 /// Creates a page representing the morning review and priorities.
 ///
@@ -56,13 +56,13 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Date Marker
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(0)
         .with_quarter_width()
         .with_text("DATE REVIEW")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(0)
         .shift_quarter_right()
         .with_three_quarters_width()
@@ -73,7 +73,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Morning Review
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(1)
         .with_full_width()
         .with_text("MORNING REVIEW")
@@ -83,13 +83,13 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Grateful/Excited For
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(2)
         .with_half_width()
         .with_text("I'M GRATEFUL FOR")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(2)
         .shift_half_right()
         .with_half_width()
@@ -102,7 +102,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Affirmation
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(9)
         .with_quarter_width()
         .with_text("AFFIRMATION")
@@ -112,13 +112,13 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Focus & Exercise
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(11)
         .with_quarter_width()
         .with_text("FOCUS")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(11)
         .shift_half_right()
         .with_quarter_width()
@@ -129,26 +129,26 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Priorities
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(13)
         .with_eighth_width()
         .with_text("P1")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(13)
         .shift_half_right()
         .with_eighth_width()
         .with_text("P2")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(15)
         .with_eighth_width()
         .with_text("P3")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(15)
         .shift_half_right()
         .with_eighth_width()
@@ -159,7 +159,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // End of Day Review
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(17)
         .with_full_width()
         .with_text("END OF DAY REVIEW")
@@ -169,7 +169,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // Today's Wins
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(18)
         .shift_quarter_right()
         .with_half_width()
@@ -178,19 +178,19 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         .draw(&ctx);
 
     // Row 19-21, lines with numbers
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(19)
         .with_sixteenth_width()
         .with_text("1")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(20)
         .with_sixteenth_width()
         .with_text("2")
         .with_padding(2.5)
         .draw(&ctx);
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(21)
         .with_sixteenth_width()
         .with_text("3")
@@ -200,7 +200,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     //
     // How I'll Improve
     //
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(22)
         .shift_quarter_right()
         .with_half_width()
@@ -209,7 +209,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         .draw(&ctx);
 
     // Row 23, lines with numbers
-    PdfBox::new()
+    BoxComponent::new()
         .at_row(23)
         .with_sixteenth_width()
         .with_text("1")
@@ -219,7 +219,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
     // Hard-coded link for now
     let (page_index, _) = planner.get_index_for_day(Month::January, 1);
     layer.add_link_annotation(LinkAnnotation::new(
-        PdfBox::new()
+        BoxComponent::new()
             .at_row(0)
             .shift_quarter_right()
             .with_three_quarters_width()
