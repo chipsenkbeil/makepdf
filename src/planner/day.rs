@@ -1,8 +1,9 @@
 use chrono::{Datelike, Month, NaiveDate};
 use owned_ttf_parser::AsFaceRef;
-use printpdf::*;
 
-use crate::{BoxComponent, Component, Context, PdfPlanner};
+use crate::{
+    BoxComponent, Component, ComponentExt, Context, PdfPlanner, WithBoundsExt, WithPaddingExt,
+};
 
 /// Creates a page representing the morning review and priorities.
 ///
@@ -52,6 +53,9 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         font,
         layer: &layer,
     };
+
+    // Hard-coded page link
+    let (page_index, _) = planner.get_index_for_day(Month::January, 1);
 
     //
     // Date Marker
@@ -124,6 +128,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         .with_quarter_width()
         .with_text("EXERCISE")
         .with_padding(2.5)
+        .with_go_to_xyz_link(page_index, None, None, None)
         .draw(&ctx);
 
     //
@@ -215,25 +220,4 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         .with_text("1")
         .with_padding(2.5)
         .draw(&ctx);
-
-    // Hard-coded link for now
-    let (page_index, _) = planner.get_index_for_day(Month::January, 1);
-    layer.add_link_annotation(LinkAnnotation::new(
-        BoxComponent::new()
-            .at_row(0)
-            .shift_quarter_right()
-            .with_three_quarters_width()
-            .with_text(format!("{}", date.format("%A, %-d %B, %C%y (WK%W)")))
-            .with_padding(2.5)
-            .bounds_rect(),
-        None,
-        None,
-        Actions::go_to(Destination::XYZ {
-            page: page_index,
-            left: None,
-            top: None,
-            zoom: None,
-        }),
-        None,
-    ));
 }

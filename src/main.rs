@@ -4,9 +4,11 @@ use std::io::BufWriter;
 mod components;
 mod constants;
 mod planner;
+mod utils;
 
 pub use components::*;
 pub use planner::PdfPlanner;
+pub use utils::*;
 
 fn main() {
     let planner = PdfPlanner::new(2024);

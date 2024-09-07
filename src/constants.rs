@@ -12,6 +12,9 @@ pub const PAGE_DPI: f32 = 300.0;
 /// Maximum rows to support on a page
 pub const MAX_ROWS: f32 = 24.0;
 
+/// Multiplier to convert points to millimeters.
+pub const PT_TO_MM: f64 = 0.352778;
+
 /// Height per row in millimeters
 pub const ROW_HEIGHT: Mm = Mm(PAGE_HEIGHT.0 / MAX_ROWS);
 
