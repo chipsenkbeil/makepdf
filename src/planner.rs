@@ -1,5 +1,5 @@
 use crate::constants::{PAGE_HEIGHT, PAGE_WIDTH, REGULAR_FONT};
-use chrono::{Datelike, Month, NaiveDate};
+use chrono::{Datelike, Days, NaiveDate};
 use owned_ttf_parser::OwnedFace;
 use printpdf::*;
 
@@ -74,63 +74,90 @@ impl PdfPlanner {
         self.year
     }
 
-    /// Retrieves the page & layer index for the specified month.
-    pub fn get_index_for_month(&self, month: impl Into<Month>) -> (PdfPageIndex, PdfLayerIndex) {
-        self.months
-            .get(month.into() as usize)
-            .expect("Month not found")
-            .to_owned()
+    /// Retrieves the page & layer index for the date.
+    pub fn get_monthly_index(&self, date: NaiveDate) -> Option<(PdfPageIndex, PdfLayerIndex)> {
+        if date.year() == self.year {
+            let idx = date.month0() as usize;
+            self.months.get(idx).copied()
+        } else {
+            None
+        }
     }
 
-    /// Retrieves the page & layer for the specified month.
-    pub fn get_for_month(&self, month: impl Into<Month>) -> (PdfPageReference, PdfLayerReference) {
-        let (page, layer) = self.get_index_for_month(month);
-        let page = self.doc.get_page(page);
-        let layer = page.get_layer(layer);
-        (page, layer)
-    }
-
-    /// Retrieves the page & layer index for the specified week (index-1), panicking if out of
-    /// range.
-    pub fn get_index_for_week(&self, week: usize) -> (PdfPageIndex, PdfLayerIndex) {
-        assert!(week > 0 && week < 53, "Week must be between 1 and 52");
-        self.weeks.get(week - 1).expect("Week not found").to_owned()
-    }
-
-    /// Retrieves the page & layer for the specified week (index-1), panicking if out of range.
-    pub fn get_for_week(&self, week: usize) -> (PdfPageReference, PdfLayerReference) {
-        let (page, layer) = self.get_index_for_week(week);
-        let page = self.doc.get_page(page);
-        let layer = page.get_layer(layer);
-        (page, layer)
-    }
-
-    /// Retrieves the page & layer index for the specified month & day (index-1), panicking if out
-    /// of range of valid date within the year.
-    pub fn get_index_for_day(
+    /// Retrieves the page & layer for the date.
+    pub fn get_monthly_reference(
         &self,
-        month: impl Into<Month>,
-        day: u32,
-    ) -> (PdfPageIndex, PdfLayerIndex) {
-        let month = month.into();
-        let date = NaiveDate::from_ymd_opt(self.year, (month as u32) + 1, day)
-            .expect("Date must be valid for the year");
-        self.days
-            .get(date.ordinal0() as usize)
-            .expect("Date not found")
-            .to_owned()
+        date: NaiveDate,
+    ) -> Option<(PdfPageReference, PdfLayerReference)> {
+        self.get_monthly_index(date).map(|(page, layer)| {
+            let page = self.doc.get_page(page);
+            let layer = page.get_layer(layer);
+            (page, layer)
+        })
     }
 
-    /// Retrieves the page & layer for the specified month & day (index-1), panicking if out
-    /// of range of valid date within the year.
-    pub fn get_for_day(
+    /// Retrieves the page & layer index for the date.
+    pub fn get_weekly_index(&self, date: NaiveDate) -> Option<(PdfPageIndex, PdfLayerIndex)> {
+        if date.year() == self.year {
+            self.weeks.get(date.iso_week().week0() as usize).copied()
+        } else {
+            None
+        }
+    }
+
+    /// Retrieves the page & layer for the date.
+    pub fn get_weekly_reference(
         &self,
-        month: impl Into<Month>,
-        day: u32,
-    ) -> (PdfPageReference, PdfLayerReference) {
-        let (page, layer) = self.get_index_for_day(month, day);
-        let page = self.doc.get_page(page);
-        let layer = page.get_layer(layer);
-        (page, layer)
+        date: NaiveDate,
+    ) -> Option<(PdfPageReference, PdfLayerReference)> {
+        self.get_weekly_index(date).map(|(page, layer)| {
+            let page = self.doc.get_page(page);
+            let layer = page.get_layer(layer);
+            (page, layer)
+        })
+    }
+
+    /// Retrieves the page & layer index for the date.
+    pub fn get_daily_index(&self, date: NaiveDate) -> Option<(PdfPageIndex, PdfLayerIndex)> {
+        if date.year() == self.year {
+            self.days.get(date.ordinal0() as usize).copied()
+        } else {
+            None
+        }
+    }
+
+    /// Retrieves the page & layer for the date, panicking if out of range of valid date within the
+    /// year.
+    pub fn get_daily_reference(
+        &self,
+        date: NaiveDate,
+    ) -> Option<(PdfPageReference, PdfLayerReference)> {
+        self.get_daily_index(date).map(|(page, layer)| {
+            let page = self.doc.get_page(page);
+            let layer = page.get_layer(layer);
+            (page, layer)
+        })
+    }
+
+    pub fn get_prev_daily_index(&self, date: NaiveDate) -> Option<(PdfPageIndex, PdfLayerIndex)> {
+        self.get_daily_index(date - Days::new(1))
+    }
+
+    pub fn get_prev_daily_reference(
+        &self,
+        date: NaiveDate,
+    ) -> Option<(PdfPageReference, PdfLayerReference)> {
+        self.get_daily_reference(date - Days::new(1))
+    }
+
+    pub fn get_next_daily_index(&self, date: NaiveDate) -> Option<(PdfPageIndex, PdfLayerIndex)> {
+        self.get_daily_index(date + Days::new(1))
+    }
+
+    pub fn get_next_daily_reference(
+        &self,
+        date: NaiveDate,
+    ) -> Option<(PdfPageReference, PdfLayerReference)> {
+        self.get_daily_reference(date + Days::new(1))
     }
 }

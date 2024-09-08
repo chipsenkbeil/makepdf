@@ -1,13 +1,15 @@
 use crate::constants::*;
-use crate::{Component, Context, Padding, Rect, WithBounds, WithPadding, WithPaddingExt};
+use crate::{Bounds, Component, Context, Margin, Rect};
 use owned_ttf_parser::Face;
 use printpdf::{Color, GlyphMetrics, Mm};
+use std::convert::Infallible;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct TextComponent {
     foreground: Color,
-    padding: Option<Padding>,
-    rect: Rect,
+    margin: Option<Margin>,
+    bounds: Rect,
     text: String,
     text_size: f32,
 }
@@ -16,8 +18,8 @@ impl Default for TextComponent {
     fn default() -> Self {
         Self {
             foreground: BANNER_TEXT_COLOR,
-            padding: None,
-            rect: Rect::default(),
+            margin: None,
+            bounds: Rect::default(),
             text: String::default(),
             text_size: 36.0,
         }
@@ -31,6 +33,16 @@ impl TextComponent {
 
     pub fn with_foreground(&mut self, color: Color) -> &mut Self {
         self.foreground = color;
+        self
+    }
+
+    pub fn with_margin(&mut self, margin: impl Into<Margin>) -> &mut Self {
+        self.margin = Some(margin.into());
+        self
+    }
+
+    pub fn with_no_margin(&mut self) -> &mut Self {
+        self.margin = None;
         self
     }
 
@@ -78,18 +90,48 @@ impl TextComponent {
     }
 }
 
+impl From<&str> for TextComponent {
+    fn from(s: &str) -> Self {
+        Self::new().with_text(s).clone()
+    }
+}
+
+impl From<String> for TextComponent {
+    fn from(s: String) -> Self {
+        Self::new().with_text(s).clone()
+    }
+}
+
+impl FromStr for TextComponent {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::from(s))
+    }
+}
+
+impl Bounds for TextComponent {
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
+    fn set_bounds(&mut self, rect: Rect) {
+        self.bounds = rect;
+    }
+}
+
 impl Component for TextComponent {
     fn draw(&self, ctx: &Context<'_>) {
-        let (llx, lly, urx, ury) = self.bounds_with_padding().to_coords();
+        let (llx, lly, urx, ury) = self.outer_bounds().to_coords();
 
-        // If given text, we'll populate within the middle of the banner
+        // If given text, we'll populate within the middle of the bounds
         if !self.text.is_empty() {
             let font_size: f32 = self.text_size;
             let text_width = self.text_width_for_face(ctx.face);
             let text_height = self.text_height_for_face(ctx.face);
 
-            // Calculate the middle of the banner and then shift over by half the text length to
-            // place it roughly within the middle of the banner itself
+            // Calculate the middle of the bounds and then shift over by half the text length to
+            // place it roughly within the middle of the bounds itself
             let x = llx + ((urx - llx) / 2.0) - (text_width / 2.0);
 
             // Calculate the space remaining from height of text and move up to vertically center.
@@ -105,25 +147,9 @@ impl Component for TextComponent {
             ctx.layer.use_text(&self.text, font_size, x, y, ctx.font);
         }
     }
-}
 
-impl WithBounds for TextComponent {
-    fn bounds(&self) -> Rect {
-        self.rect
-    }
-
-    fn set_bounds(&mut self, bounds: Rect) {
-        self.rect = bounds;
-    }
-}
-
-impl WithPadding for TextComponent {
-    fn padding(&self) -> Option<Padding> {
-        self.padding
-    }
-
-    fn set_padding(&mut self, padding: Option<Padding>) {
-        self.padding = padding
+    fn margin(&self) -> Option<Margin> {
+        self.margin
     }
 }
 

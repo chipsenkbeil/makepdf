@@ -1,19 +1,61 @@
 mod r#box;
+mod line;
 mod link;
+mod outline;
 mod text;
 
+pub use line::LineComponent;
 pub use link::LinkComponent;
+pub use outline::OutlineComponent;
 pub use r#box::BoxComponent;
 pub use text::TextComponent;
 
-use crate::{WithBounds, WithPadding};
+use crate::{Bounds, Margin, Padding, Rect};
 use owned_ttf_parser::Face;
 use printpdf::{Destination, IndirectFontRef, PdfLayerReference, PdfPageIndex};
 
 /// Abstraction of a component that can be drawn on a PDF.
-pub trait Component: Clone + WithBounds + WithPadding {
+pub trait Component: Bounds + Clone {
     /// Draws the component within the PDF.
     fn draw(&self, ctx: &Context<'_>);
+
+    /// Returns the padding associated with the component.
+    fn padding(&self) -> Option<Padding> {
+        None
+    }
+
+    /// Returns the margin associated with the component.
+    fn margin(&self) -> Option<Margin> {
+        None
+    }
+
+    /// Returns bounds adjusted to account for margin.
+    fn outer_bounds(&self) -> Rect {
+        let (mut llx, mut lly, mut urx, mut ury) = self.bounds().to_coords();
+
+        if let Some(margin) = self.margin() {
+            lly += margin.bottom;
+            ury -= margin.top;
+            llx += margin.left;
+            urx -= margin.right;
+        }
+
+        Rect::from_coords(llx, lly, urx, ury)
+    }
+
+    /// Returns bounds adjusted to account for margin and padding.
+    fn inner_bounds(&self) -> Rect {
+        let (mut llx, mut lly, mut urx, mut ury) = self.outer_bounds().to_coords();
+
+        if let Some(padding) = self.padding() {
+            lly += padding.bottom;
+            ury -= padding.top;
+            llx += padding.left;
+            urx -= padding.right;
+        }
+
+        Rect::from_coords(llx, lly, urx, ury)
+    }
 }
 
 pub trait ComponentExt: Component {

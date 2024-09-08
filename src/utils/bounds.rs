@@ -1,64 +1,57 @@
 use crate::constants::*;
-use crate::utils::{Padding, Rect};
+use crate::utils::Rect;
 use printpdf::Mm;
 
-/// Represents ability to define padding for some object.
-///
-/// Requires that the object also implements bounds.
-pub trait WithPadding: WithBounds {
-    /// Returns padding of object.
-    fn padding(&self) -> Option<Padding>;
-
-    /// Sets new padding of the object.
-    fn set_padding(&mut self, padding: Option<Padding>);
-}
-
-pub trait WithPaddingExt: WithPadding {
-    fn with_padding(&mut self, padding: impl Into<Padding>) -> &mut Self {
-        self.set_padding(Some(padding.into()));
-        self
-    }
-
-    fn with_no_padding(&mut self) -> &mut Self {
-        self.set_padding(None);
-        self
-    }
-
-    /// Returns bounds adjusted to account for padding.
-    fn bounds_with_padding(&self) -> Rect {
-        let (mut llx, mut lly, mut urx, mut ury) = self.bounds().to_coords();
-
-        if let Some(padding) = self.padding() {
-            lly += padding.bottom;
-            ury -= padding.top;
-            llx += padding.left;
-            urx -= padding.right;
-        }
-
-        Rect::from_coords(llx, lly, urx, ury)
-    }
-}
-
-impl<T: WithPadding> WithPaddingExt for T {}
-
-/// Represents ability to define bounds for some object.
-pub trait WithBounds {
-    /// Returns bounds of the object in form of a rectangle.
+/// Provides methods to access and manipulate bounds on some object.
+pub trait Bounds {
+    /// Retrieve the bounds for an object.
     fn bounds(&self) -> Rect;
 
-    /// Sets new bounds of the object in form of a rectangle.
-    fn set_bounds(&mut self, bounds: Rect);
-}
+    /// Sets the bounds for some object.
+    fn set_bounds(&mut self, rect: Rect);
 
-/// Extension of the [`WithBounds`] trait to provide convience methods to adjust the bounds
-/// of the object within the page.
-pub trait WithBoundsExt: WithBounds {
-    fn with_bounds(&mut self, bounds: impl Into<Rect>) -> &mut Self {
-        let bounds = bounds.into();
-        self.set_bounds(bounds);
+    /// Updates bounds of the object, returning a mutable reference to it.
+    fn with_bounds(&mut self, rect: Rect) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.set_bounds(rect);
         self
     }
+}
 
+impl Bounds for Rect {
+    fn bounds(&self) -> Rect {
+        *self
+    }
+
+    fn set_bounds(&mut self, rect: Rect) {
+        self.x = rect.x;
+        self.y = rect.y;
+        self.width = rect.width;
+        self.height = rect.height;
+    }
+}
+
+/// Provides additional methods to manipulate [`Bounds`].
+pub trait BoundsExt: Bounds {
+    fn with_width(&mut self, width: Mm) -> &mut Self;
+    fn with_height(&mut self, height: Mm) -> &mut Self;
+    fn with_full_width(&mut self) -> &mut Self;
+    fn with_three_quarters_width(&mut self) -> &mut Self;
+    fn with_half_width(&mut self) -> &mut Self;
+    fn with_quarter_width(&mut self) -> &mut Self;
+    fn with_eighth_width(&mut self) -> &mut Self;
+    fn with_sixteenth_width(&mut self) -> &mut Self;
+    fn shift_three_quarters_right(&mut self) -> &mut Self;
+    fn shift_half_right(&mut self) -> &mut Self;
+    fn shift_quarter_right(&mut self) -> &mut Self;
+    fn shift_eighth_right(&mut self) -> &mut Self;
+    fn at_col(&mut self, col: usize) -> &mut Self;
+    fn at_row(&mut self, row: usize) -> &mut Self;
+}
+
+impl<T: Bounds + Sized> BoundsExt for T {
     fn with_width(&mut self, width: Mm) -> &mut Self {
         let mut bounds = self.bounds();
         bounds.width = width;
@@ -127,7 +120,7 @@ pub trait WithBoundsExt: WithBounds {
         let mut bounds = self.bounds();
         let col = col as f32;
         bounds.x = Mm(col * (PAGE_WIDTH.0 / 8.0));
-        self.set_bounds(bounds);
+        bounds.set_bounds(bounds);
         self
     }
 
@@ -139,5 +132,3 @@ pub trait WithBoundsExt: WithBounds {
         self
     }
 }
-
-impl<T: WithBounds> WithBoundsExt for T {}

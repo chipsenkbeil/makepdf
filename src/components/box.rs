@@ -1,8 +1,5 @@
 use crate::constants::*;
-use crate::{
-    Component, Context, Padding, Rect, TextComponent, WithBounds, WithBoundsExt, WithPadding,
-    WithPaddingExt,
-};
+use crate::{Bounds, Component, Context, Margin, Padding, Rect, TextComponent};
 use printpdf::Color;
 
 #[derive(Clone, Debug)]
@@ -10,7 +7,8 @@ pub struct BoxComponent {
     background: Color,
     foreground: Color,
     padding: Option<Padding>,
-    rect: Rect,
+    margin: Option<Margin>,
+    bounds: Rect,
     text: String,
     text_size: f32,
 }
@@ -21,7 +19,8 @@ impl Default for BoxComponent {
             background: BANNER_BACKGROUND_COLOR,
             foreground: BANNER_TEXT_COLOR,
             padding: None,
-            rect: Rect::default(),
+            margin: None,
+            bounds: Rect::default(),
             text: String::default(),
             text_size: 36.0,
         }
@@ -52,6 +51,36 @@ impl BoxComponent {
         self.text_size = size.into();
         self
     }
+
+    pub fn with_padding(&mut self, padding: impl Into<Padding>) -> &mut Self {
+        self.padding = Some(padding.into());
+        self
+    }
+
+    pub fn with_no_padding(&mut self) -> &mut Self {
+        self.padding = None;
+        self
+    }
+
+    pub fn with_margin(&mut self, margin: impl Into<Margin>) -> &mut Self {
+        self.margin = Some(margin.into());
+        self
+    }
+
+    pub fn with_no_margin(&mut self) -> &mut Self {
+        self.margin = None;
+        self
+    }
+}
+
+impl Bounds for BoxComponent {
+    fn bounds(&self) -> Rect {
+        self.bounds
+    }
+
+    fn set_bounds(&mut self, rect: Rect) {
+        self.bounds = rect;
+    }
 }
 
 impl Component for BoxComponent {
@@ -59,35 +88,23 @@ impl Component for BoxComponent {
         // Render a rectangle representing the box
         ctx.layer.set_fill_color(self.background.clone());
         ctx.layer.set_outline_color(self.background.clone());
-        ctx.layer.add_rect(self.bounds_with_padding().into());
+        ctx.layer.add_rect(self.outer_bounds().into());
 
         // Render text within the padded rect if we have text to render
         if !self.text.is_empty() {
             TextComponent::new()
                 .with_text(&self.text)
                 .with_text_size(self.text_size)
-                .with_bounds(self.bounds_with_padding())
+                .with_bounds(self.inner_bounds())
                 .draw(ctx);
         }
     }
-}
 
-impl WithBounds for BoxComponent {
-    fn bounds(&self) -> Rect {
-        self.rect
+    fn margin(&self) -> Option<Margin> {
+        self.margin
     }
 
-    fn set_bounds(&mut self, bounds: Rect) {
-        self.rect = bounds;
-    }
-}
-
-impl WithPadding for BoxComponent {
     fn padding(&self) -> Option<Padding> {
         self.padding
-    }
-
-    fn set_padding(&mut self, padding: Option<Padding>) {
-        self.padding = padding
     }
 }

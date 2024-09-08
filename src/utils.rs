@@ -1,7 +1,7 @@
-mod layout;
-mod padding;
+mod bounds;
 mod rect;
+mod space;
 
-pub use layout::{WithBounds, WithBoundsExt, WithPadding, WithPaddingExt};
-pub use padding::Padding;
+pub use bounds::{Bounds, BoundsExt};
 pub use rect::Rect;
+pub use space::{Margin, Padding, Space};

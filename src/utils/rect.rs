@@ -47,6 +47,27 @@ impl Rect {
     pub fn ury(&self) -> Mm {
         self.y + self.height
     }
+
+    /// Checks if the rectangle has a defined width and height (greater than zero), otherwise it is
+    /// considered unsized and should have sizing calculated in some other manner.
+    #[inline]
+    pub fn has_defined_size(&self) -> bool {
+        self.has_defined_width() && self.has_defined_height()
+    }
+
+    /// Checks if the rectangle has a defined width (greater than zero), otherwise it is considered
+    /// unsized for width and should have the width calculated in some other manner.
+    #[inline]
+    pub fn has_defined_width(&self) -> bool {
+        self.width.0 > 0.0
+    }
+
+    /// Checks if the rectangle has a defined height (greater than zero), otherwise it is
+    /// considered unsized for height and should have the height calculated in some other manner.
+    #[inline]
+    pub fn has_defined_height(&self) -> bool {
+        self.height.0 > 0.0
+    }
 }
 
 impl From<printpdf::Rect> for Rect {
