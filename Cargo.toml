@@ -1,10 +1,29 @@
 [package]
-name = "beatrix-planner"
+name = "lpdf"
 version = "0.1.0"
 edition = "2021"
+description = "Tool to make PDFs via Lua scripts for use with e-ink devices"
+authors = ["Chip Senkbeil <chip@senkbeil.org>"]
+categories = ["command-line-utilities"]
+keywords = ["cli", "pdf", "eink", "lua"]
+homepage = "https://github.com/chipsenkbeil/mpdf"
+repository = "https://github.com/chipsenkbeil/mpdf"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+strip = true
 
 [dependencies]
+anyhow = "1.0.87"
+clap = { version = "4.5.17", features = ["derive"] }
 chrono = "0.4.38"
+opener = "0.7.2"
 owned_ttf_parser = "0.24.0"
+mlua = { version = "0.9.9", features = ["luau", "macros"] }
+phf = { version = "0.11.2", features = ["macros"] }
 #printpdf = "0.7.0"
 printpdf = { git = "https://github.com/chipsenkbeil/printpdf.git" }

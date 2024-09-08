@@ -1,7 +1,7 @@
 use crate::constants::*;
 use crate::{Bounds, Component, Context, Margin, Rect};
 use owned_ttf_parser::Face;
-use printpdf::{Color, GlyphMetrics, Mm};
+use printpdf::{Color, GlyphMetrics, Mm, Pt};
 use std::convert::Infallible;
 use std::str::FromStr;
 
@@ -60,7 +60,7 @@ impl TextComponent {
     pub fn text_width_for_face(&self, face: &Face<'_>) -> Mm {
         let units_per_em = face.units_per_em() as f64;
         let scale = self.text_size as f64 / units_per_em;
-        let mm = self
+        Pt(self
             .text
             .chars()
             .map(|ch| {
@@ -68,10 +68,8 @@ impl TextComponent {
                     .map(|glyph| glyph.width as f64 * scale)
                     .unwrap_or(0.0)
             })
-            .sum::<f64>()
-            * PT_TO_MM;
-
-        Mm(mm as f32)
+            .sum::<f64>() as f32)
+        .into()
     }
 
     /// Returns the height of the text in millimeters for the given font face.
@@ -85,8 +83,7 @@ impl TextComponent {
         let text_height =
             (ascender - descender + line_gap) * (self.text_size as f64 / units_per_em);
 
-        // Convert to millimeters (1 point = 0.352778 mm)
-        Mm((text_height * PT_TO_MM) as f32)
+        Pt(text_height as f32).into()
     }
 }
 

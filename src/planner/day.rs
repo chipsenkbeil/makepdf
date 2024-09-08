@@ -3,7 +3,7 @@ use owned_ttf_parser::AsFaceRef;
 
 use crate::constants::ROW_HEIGHT;
 use crate::{
-    BoundsExt, BoxComponent, Component, Context, LineComponent, OutlineComponent, PdfPlanner,
+    BoundsExt, BoxComponent, Component, Context, LineComponent, OutlineComponent, Planner,
     TextComponent,
 };
 
@@ -85,7 +85,7 @@ macro_rules! grateful_excited_line {
 ///           [ HOW I'LL IMPROVE ]
 /// 1_________________________________________
 /// ```
-pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
+pub fn make_page(planner: &Planner, date: NaiveDate) {
     println!(
         "Building daily page: {}",
         date.format("%A, %-d %B, %C%y (WK%W)")
@@ -137,7 +137,7 @@ pub fn make_page(planner: &PdfPlanner, date: NaiveDate) {
         .at_row(0)
         .shift_quarter_right()
         .with_three_quarters_width()
-        .with_text(format!("{}", date.format("%A, %-d %B, %C%y (WK%W)")))
+        .with_text(format!("{}", date.format("%A, %-d %B, %Y (WK%W)")))
         .with_margin(2.5)
         .draw(&ctx);
 
