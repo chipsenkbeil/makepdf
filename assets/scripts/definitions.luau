@@ -1,0 +1,2 @@
+---@meta
+---Primary definition file representing mpdf's Lua library.

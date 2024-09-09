@@ -1,27 +1,17 @@
-use crate::constants::{DEFAULT_FONT, SCRIPTS};
+use crate::Script;
 use anyhow::Context;
 use chrono::{Datelike, Days, NaiveDate};
-use mlua::Lua;
 use owned_ttf_parser::OwnedFace;
 use printpdf::*;
 use std::{fs::File, io::BufWriter};
 
-//mod day;
+mod config;
+mod font;
+mod global;
 
-/// Configuration tied to building a planner.
-#[derive(Clone, Debug)]
-pub struct PlannerConfig {
-    /// Year associated with planner
-    pub year: i32,
-    /// Width x Height of each page within the planner
-    pub dimensions: (Mm, Mm),
-    /// DPI of PDF document
-    pub dpi: f32,
-    /// Optional font for the planner
-    pub font: Option<String>,
-    /// Path or name of script (e.g. `lpdf:panda`)
-    pub script: String,
-}
+pub use config::{PlannerConfig, PlannerDimensions};
+pub use font::PlannerFont;
+pub use global::PlannerGlobal;
 
 /// Primary entrypoint to building a planner.
 pub struct Planner {
@@ -38,32 +28,24 @@ impl Planner {
     /// Builds a planner - does not save it - using the provided `config`.
     pub fn build(config: PlannerConfig) -> anyhow::Result<Self> {
         let doc = PdfDocument::empty(format!("LPDF Planner {}", config.year));
-        let (page_width, page_height) = config.dimensions;
-        let font_bytes = match config.font.clone() {
-            Some(path) => std::fs::read(path).context("Failed to read font")?,
-            None => DEFAULT_FONT.to_vec(),
-        };
 
+        let (page_width, page_height) = (config.dimensions.width, config.dimensions.height);
         let year = config.year;
-        let face = OwnedFace::from_vec(font_bytes, 0).context("Failed to build font into face")?;
+
+        let face = PlannerFont::load(config.font.as_deref())?.face;
         let font = doc
             .add_external_font(face.as_slice())
             .context("Failed to add external font")?;
 
-        // Load our script either from our internal map or an external file
-        let script = match config
-            .script
-            .strip_prefix("lpdf:")
-            .and_then(|s| SCRIPTS.get(s))
-        {
-            Some(bytes) => bytes.to_vec(),
-            None => std::fs::read(&config.script)
-                .with_context(|| format!("Failed to load script {}", config.script))?,
-        };
+        // Load and execute the script that will configure ourselves for PDF generation.
+        let mut script = Script::load(&config.script)?;
+        script.set_global("pdf", PlannerGlobal { config })?;
+        script.exec()?;
 
-        let lua = Lua::new();
-        let chunk = lua.load(script);
-        chunk.exec().context("Failed to execute script")?;
+        let pdf: PlannerGlobal = script.get_global("pdf")?;
+        println!("{pdf:?}");
+
+        let config = pdf.config;
 
         let mut this = Self {
             config,

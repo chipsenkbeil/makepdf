@@ -1,5 +1,5 @@
 [package]
-name = "lpdf"
+name = "mpdf"
 version = "0.1.0"
 edition = "2021"
 description = "Tool to make PDFs via Lua scripts for use with e-ink devices"
