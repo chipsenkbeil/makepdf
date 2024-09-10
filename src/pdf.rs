@@ -1,6 +1,8 @@
 mod config;
+mod object;
 
 pub use config::*;
+pub use object::*;
 
 use mlua::prelude::*;
 

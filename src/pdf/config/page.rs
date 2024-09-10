@@ -54,7 +54,7 @@ impl<'lua> FromLua<'lua> for PagePdfConfig {
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "config.page",
+                to: "pdf.config.page",
                 message: None,
             }),
         }

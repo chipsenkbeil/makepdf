@@ -34,7 +34,7 @@ impl<'lua> FromLua<'lua> for MonthlyPlannerPdfConfig {
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "config.planner.monthly",
+                to: "pdf.config.planner.monthly",
                 message: None,
             }),
         }

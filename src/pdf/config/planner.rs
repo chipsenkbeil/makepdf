@@ -65,7 +65,7 @@ impl<'lua> FromLua<'lua> for PlannerPdfConfig {
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "config.planner",
+                to: "pdf.config.planner",
                 message: None,
             }),
         }

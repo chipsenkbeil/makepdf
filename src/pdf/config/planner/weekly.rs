@@ -34,7 +34,7 @@ impl<'lua> FromLua<'lua> for WeeklyPlannerPdfConfig {
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "config.planner.weekly",
+                to: "pdf.config.planner.weekly",
                 message: None,
             }),
         }
