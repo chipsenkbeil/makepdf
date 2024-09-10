@@ -30,7 +30,7 @@ impl<'lua> FromLua<'lua> for WeeklyPlannerPdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                enabled: table.raw_get("enabled")?,
+                enabled: raw_get!(table, "enabled")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

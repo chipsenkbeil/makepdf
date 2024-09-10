@@ -1,25 +1,25 @@
-use super::{BoundsPdfObject, Margin, PdfObjectContext};
+use super::{Margin, PdfObjectBounds, PdfObjectContext};
 use mlua::prelude::*;
 use palette::Srgb;
 
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug)]
-pub struct TextPdfObject {
+pub struct PdfObjectText {
     pub color: Srgb,
     pub margin: Option<Margin>,
-    pub bounds: BoundsPdfObject,
+    pub bounds: PdfObjectBounds,
     pub thickness: f32,
     pub style: bool,
 }
 
-impl TextPdfObject {
+impl PdfObjectText {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
         todo!("implement");
     }
 }
 
-impl<'lua> IntoLua<'lua> for TextPdfObject {
+impl<'lua> IntoLua<'lua> for PdfObjectText {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
@@ -34,20 +34,19 @@ impl<'lua> IntoLua<'lua> for TextPdfObject {
     }
 }
 
-impl<'lua> FromLua<'lua> for TextPdfObject {
+impl<'lua> FromLua<'lua> for PdfObjectText {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                color: table
-                    .raw_get::<_, String>("color")?
+                color: raw_get_wrap!(table.raw_get::<_, String>("color"), "color")?
                     .parse::<Srgb<u8>>()
                     .map_err(LuaError::external)?
                     .into(),
-                margin: table.raw_get("margin")?,
-                bounds: table.raw_get("bounds")?,
-                thickness: table.raw_get("thickness")?,
-                style: table.raw_get("style")?,
+                margin: raw_get!(table, "margin")?,
+                bounds: raw_get!(table, "bounds")?,
+                thickness: raw_get!(table, "thickness")?,
+                style: raw_get!(table, "style")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

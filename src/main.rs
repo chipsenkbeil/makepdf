@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use mpdf::{PagePdfConfig, Pdf, PdfConfig, PlannerPdfConfig};
+use mpdf::{Engine, PagePdfConfig, PdfConfig, PlannerPdfConfig};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -71,16 +71,24 @@ fn main() -> anyhow::Result<()> {
             script,
             year,
         } => {
-            //Planner::build(PlannerConfig {
-            //    year,
-            //    dimensions: PlannerDimensions::from_str(&dimensions, dpi)?,
-            //    dpi,
-            //    font,
-            //    script,
-            //})
-            //.context("Failed to build PDF")?
-            //.save(&output)
-            //.context("Failed to save planner to file")?;
+            let (width, height) = PagePdfConfig::parse_size(&dimensions, dpi)?;
+
+            Engine::build(PdfConfig {
+                page: PagePdfConfig {
+                    dpi,
+                    font,
+                    width,
+                    height,
+                },
+                planner: PlannerPdfConfig {
+                    year,
+                    ..Default::default()
+                },
+                script,
+            })
+            .context("Failed to build PDF")?
+            .save(&output)
+            .context("Failed to save PDF to file")?;
 
             // If indicated, we try to open the PDF automatically
             if open {

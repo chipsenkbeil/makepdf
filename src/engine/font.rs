@@ -4,11 +4,11 @@ use owned_ttf_parser::OwnedFace;
 
 /// Represents the font used by the planner.
 #[derive(Debug)]
-pub struct PlannerFont {
+pub struct Font {
     pub face: OwnedFace,
 }
 
-impl PlannerFont {
+impl Font {
     /// Loads the font from the provided `path`, falling back to the default font if none
     /// specified.
     pub fn load(path: Option<&str>) -> anyhow::Result<Self> {

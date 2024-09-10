@@ -58,10 +58,10 @@ impl<'lua> FromLua<'lua> for PlannerPdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                year: table.raw_get("year")?,
-                monthly: table.raw_get("monthly")?,
-                weekly: table.raw_get("weekly")?,
-                daily: table.raw_get("daily")?,
+                year: raw_get!(table, "year")?,
+                monthly: raw_get!(table, "monthly")?,
+                weekly: raw_get!(table, "weekly")?,
+                daily: raw_get!(table, "daily")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

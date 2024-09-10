@@ -17,6 +17,7 @@ pub struct PagePdfConfig {
 }
 
 impl Default for PagePdfConfig {
+    /// Page defaults are modeled after the Supernote A6 X2 Nomad.
     fn default() -> Self {
         let dpi = 300.0;
         Self {
@@ -47,10 +48,10 @@ impl<'lua> FromLua<'lua> for PagePdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                dpi: table.raw_get("dpi")?,
-                font: table.raw_get("font")?,
-                width: Mm(table.raw_get("width")?),
-                height: Mm(table.raw_get("height")?),
+                dpi: raw_get!(table, "dpi")?,
+                font: raw_get!(table, "font")?,
+                width: Mm(raw_get!(table, "width")?),
+                height: Mm(raw_get!(table, "height")?),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

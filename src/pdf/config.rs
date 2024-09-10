@@ -49,9 +49,9 @@ impl<'lua> FromLua<'lua> for PdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                planner: table.raw_get("planner")?,
-                page: table.raw_get("page")?,
-                script: table.raw_get("script")?,
+                planner: raw_get!(table, "planner")?,
+                page: raw_get!(table, "page")?,
+                script: raw_get!(table, "script")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
