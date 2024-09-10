@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use mpdf::{Planner, PlannerConfig, PlannerDimensions};
+use mpdf::{PagePdfConfig, Pdf, PdfConfig, PlannerPdfConfig};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -26,11 +26,11 @@ enum Commands {
         ///
         /// Note the the DPI will influence conversion rates from pixels to
         /// PDF millimeters.
-        #[arg(short, long, default_value_t = String::from("1404x1872px"))]
+        #[arg(short, long, default_value_t = PagePdfConfig::default().to_px_size_string())]
         dimensions: String,
 
         /// DPI to use for the created PDF.
-        #[arg(long, default_value_t = 300.0)]
+        #[arg(long, default_value_t = PagePdfConfig::default().dpi)]
         dpi: f32,
 
         /// Path to custom font to use in place of the default Jetbrains Mono font.
@@ -49,11 +49,11 @@ enum Commands {
         ///
         /// Internal scripts are referenced using a special syntax of
         /// `mpdf:{NAME}` where the name is prefixed with `mpdf:`.
-        #[arg(short, long, default_value_t = String::from("mpdf:panda"))]
+        #[arg(short, long, default_value_t = PdfConfig::default().script)]
         script: String,
 
         /// Year to associate when running the PDF generation script.
-        #[arg(long, default_value_t = 2024)]
+        #[arg(long, default_value_t = PlannerPdfConfig::default().year)]
         year: i32,
     },
 }
@@ -71,16 +71,16 @@ fn main() -> anyhow::Result<()> {
             script,
             year,
         } => {
-            Planner::build(PlannerConfig {
-                year,
-                dimensions: PlannerDimensions::from_str(&dimensions, dpi)?,
-                dpi,
-                font,
-                script,
-            })
-            .context("Failed to build PDF")?
-            .save(&output)
-            .context("Failed to save planner to file")?;
+            //Planner::build(PlannerConfig {
+            //    year,
+            //    dimensions: PlannerDimensions::from_str(&dimensions, dpi)?,
+            //    dpi,
+            //    font,
+            //    script,
+            //})
+            //.context("Failed to build PDF")?
+            //.save(&output)
+            //.context("Failed to save planner to file")?;
 
             // If indicated, we try to open the PDF automatically
             if open {

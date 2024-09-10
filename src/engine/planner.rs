@@ -27,7 +27,7 @@ pub struct Planner {
 impl Planner {
     /// Builds a planner - does not save it - using the provided `config`.
     pub fn build(config: PlannerConfig) -> anyhow::Result<Self> {
-        let doc = PdfDocument::empty(format!("LPDF Planner {}", config.year));
+        let doc = PdfDocument::empty(format!("Planner {}", config.year));
 
         let (page_width, page_height) = (config.dimensions.width, config.dimensions.height);
         let year = config.year;
