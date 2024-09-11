@@ -1,21 +1,28 @@
-use crate::pdf::{Margin, PdfBounds, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
 use mlua::prelude::*;
-use palette::Srgb;
+use printpdf::{
+    path::{PaintMode, WindingOrder},
+    Rect,
+};
 
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug)]
 pub struct PdfObjectRect {
-    pub color: Srgb,
-    pub margin: Option<Margin>,
     pub bounds: PdfBounds,
-    pub thickness: f32,
-    pub style: bool,
+    pub color: PdfColor,
 }
 
 impl PdfObjectRect {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
-        todo!("implement");
+        ctx.layer.set_fill_color(self.color.into());
+        ctx.layer.set_outline_color(self.color.into());
+        ctx.layer.add_rect(Rect {
+            ll: self.bounds.ll.into(),
+            ur: self.bounds.ur.into(),
+            mode: PaintMode::default(),
+            winding: WindingOrder::default(),
+        });
     }
 }
 
@@ -24,11 +31,8 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("color", format!("{:X}", Srgb::<u8>::from(self.color)))?;
-        table.raw_set("margin", self.margin)?;
         table.raw_set("bounds", self.bounds)?;
-        table.raw_set("thickness", self.thickness)?;
-        table.raw_set("style", self.style)?;
+        table.raw_set("color", self.color)?;
 
         Ok(LuaValue::Table(table))
     }
@@ -39,18 +43,12 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                color: raw_get_wrap!(table.raw_get::<_, String>("color"), "color")?
-                    .parse::<Srgb<u8>>()
-                    .map_err(LuaError::external)?
-                    .into(),
-                margin: raw_get!(table, "margin")?,
                 bounds: raw_get!(table, "bounds")?,
-                thickness: raw_get!(table, "thickness")?,
-                style: raw_get!(table, "style")?,
+                color: raw_get!(table, "color")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "pdf.object.line",
+                to: "pdf.object.rect",
                 message: None,
             }),
         }

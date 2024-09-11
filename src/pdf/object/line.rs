@@ -1,6 +1,6 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
+use crate::pdf::{PdfColor, PdfObjectContext, PdfPoint};
 use mlua::prelude::*;
-use printpdf::{Line, LineCapStyle, LineDashPattern, Point};
+use printpdf::{Line, LineCapStyle, LineDashPattern};
 
 /// Style to use with the line.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -46,8 +46,8 @@ impl<'lua> FromLua<'lua> for PdfObjectLineStyle {
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug)]
 pub struct PdfObjectLine {
-    pub bounds: PdfBounds,
     pub color: PdfColor,
+    pub points: Vec<PdfPoint>,
     pub thickness: f32,
     pub style: PdfObjectLineStyle,
 }
@@ -65,11 +65,12 @@ impl PdfObjectLine {
                 dash_1: Some(5),
                 ..Default::default()
             });
+        } else {
+            ctx.layer.set_line_dash_pattern(LineDashPattern::default());
         }
 
-        let (llx, lly, urx, _) = self.bounds.to_coords();
         ctx.layer.add_line(Line {
-            points: vec![(Point::new(llx, lly), false), (Point::new(urx, lly), false)],
+            points: self.points.iter().map(|p| ((*p).into(), false)).collect(),
             is_closed: false,
         });
     }
@@ -80,8 +81,8 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("bounds", self.bounds)?;
         table.raw_set("color", self.color)?;
+        table.raw_set("points", self.points)?;
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
 
@@ -94,8 +95,8 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                bounds: raw_get!(table, "bounds")?,
                 color: raw_get!(table, "color")?,
+                points: raw_get!(table, "points")?,
                 thickness: raw_get!(table, "thickness")?,
                 style: raw_get!(table, "style")?,
             }),

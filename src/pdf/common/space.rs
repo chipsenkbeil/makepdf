@@ -29,7 +29,7 @@ impl<'lua> IntoLua<'lua> for PdfSpace {
 
 impl<'lua> FromLua<'lua> for PdfSpace {
     #[inline]
-    fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
+    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 top: Mm(raw_get!(table, "top")?),

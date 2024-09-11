@@ -1,9 +1,10 @@
 use mlua::prelude::*;
 use palette::Srgb;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
-/// Spacing for some object in a PDF.
+/// Color for some object in a PDF.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct PdfColor(Srgb);
 
@@ -21,10 +22,9 @@ impl DerefMut for PdfColor {
     }
 }
 
-impl ToString for PdfColor {
-    /// Converts color to an uppercase hex string.
-    fn to_string(&self) -> String {
-        format!("{:X}", Srgb::<u8>::from(self.0))
+impl fmt::Display for PdfColor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:X}", Srgb::<u8>::from(self.0))
     }
 }
 
