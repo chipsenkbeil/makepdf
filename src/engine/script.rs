@@ -30,7 +30,7 @@ impl Script {
                 .with_context(|| format!("Failed to load script '{}'", script))?,
         };
 
-        // Create a new Luau instance in sandbox mode (should not fail with Luau)
+        // Create a new Lua instance in sandbox mode (should not fail with Luau)
         let lua = Lua::new();
         lua.sandbox(true)
             .context("Failed to set sandbox mode on Lua runtime")?;

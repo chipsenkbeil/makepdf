@@ -24,5 +24,5 @@ pub const DEFAULT_FONT: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Re
 
 /// Internal scripts available to be run
 pub static SCRIPTS: phf::Map<&'static str, &[u8]> = phf::phf_map! {
-    "panda" => include_bytes!("../assets/scripts/panda.luau"),
+    "panda" => include_bytes!("../assets/scripts/panda.lua"),
 };

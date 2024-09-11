@@ -1,21 +1,77 @@
-use super::{Margin, PdfObjectBounds, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
 use mlua::prelude::*;
-use palette::Srgb;
+use printpdf::{Line, LineCapStyle, LineDashPattern, Point};
+
+/// Style to use with the line.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum PdfObjectLineStyle {
+    Solid,
+    Dashed,
+}
+
+impl<'lua> IntoLua<'lua> for PdfObjectLineStyle {
+    #[inline]
+    fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
+        lua.create_string(match self {
+            Self::Solid => "solid",
+            Self::Dashed => "dashed",
+        })
+        .map(LuaValue::String)
+    }
+}
+
+impl<'lua> FromLua<'lua> for PdfObjectLineStyle {
+    #[inline]
+    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+        let from = value.type_name();
+        match value {
+            LuaValue::String(s) => match s.to_string_lossy().as_ref() {
+                "solid" => Ok(Self::Solid),
+                "dashed" => Ok(Self::Dashed),
+                ty => Err(LuaError::FromLuaConversionError {
+                    from,
+                    to: "pdf.object.line.style",
+                    message: Some(format!("unknown type: {ty}")),
+                }),
+            },
+            _ => Err(LuaError::FromLuaConversionError {
+                from,
+                to: "pdf.object.line.style",
+                message: None,
+            }),
+        }
+    }
+}
 
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug)]
 pub struct PdfObjectLine {
-    pub bounds: PdfObjectBounds,
-    pub color: Option<Srgb>,
-    pub margin: Option<Margin>,
-    pub thickness: Option<f32>,
-    pub style: Option<bool>,
+    pub bounds: PdfBounds,
+    pub color: PdfColor,
+    pub thickness: f32,
+    pub style: PdfObjectLineStyle,
 }
 
 impl PdfObjectLine {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
-        todo!("implement");
+        ctx.layer.set_fill_color(self.color.into());
+        ctx.layer.set_outline_color(self.color.into());
+        ctx.layer.set_outline_thickness(self.thickness);
+
+        if let PdfObjectLineStyle::Dashed = self.style {
+            ctx.layer.set_line_cap_style(LineCapStyle::Round);
+            ctx.layer.set_line_dash_pattern(LineDashPattern {
+                dash_1: Some(5),
+                ..Default::default()
+            });
+        }
+
+        let (llx, lly, urx, _) = self.bounds.to_coords();
+        ctx.layer.add_line(Line {
+            points: vec![(Point::new(llx, lly), false), (Point::new(urx, lly), false)],
+            is_closed: false,
+        });
     }
 }
 
@@ -24,12 +80,8 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set(
-            "color",
-            self.color.map(|c| format!("{:X}", Srgb::<u8>::from(c))),
-        )?;
-        table.raw_set("margin", self.margin)?;
         table.raw_set("bounds", self.bounds)?;
+        table.raw_set("color", self.color)?;
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
 
@@ -42,13 +94,8 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                color: raw_get_wrap!(table.raw_get::<_, Option<String>>("color"), "color")?
-                    .map(|c| c.parse::<Srgb<u8>>())
-                    .transpose()
-                    .map_err(LuaError::external)?
-                    .map(Into::into),
-                margin: raw_get!(table, "margin")?,
                 bounds: raw_get!(table, "bounds")?,
+                color: raw_get!(table, "color")?,
                 thickness: raw_get!(table, "thickness")?,
                 style: raw_get!(table, "style")?,
             }),

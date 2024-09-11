@@ -1,19 +1,19 @@
 use mlua::prelude::*;
 use printpdf::Mm;
 
-pub type Margin = PdfObjectSpace;
-pub type Padding = PdfObjectSpace;
+pub type Margin = PdfSpace;
+pub type Padding = PdfSpace;
 
 /// Spacing for some object in a PDF.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct PdfObjectSpace {
+pub struct PdfSpace {
     pub top: Mm,
     pub left: Mm,
     pub right: Mm,
     pub bottom: Mm,
 }
 
-impl<'lua> IntoLua<'lua> for PdfObjectSpace {
+impl<'lua> IntoLua<'lua> for PdfSpace {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
@@ -27,7 +27,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectSpace {
     }
 }
 
-impl<'lua> FromLua<'lua> for PdfObjectSpace {
+impl<'lua> FromLua<'lua> for PdfSpace {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {

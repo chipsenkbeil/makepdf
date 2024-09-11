@@ -1,15 +1,11 @@
-mod bounds;
 mod line;
 mod rect;
 mod shape;
-mod space;
 mod text;
 
-pub use bounds::PdfObjectBounds;
 pub use line::PdfObjectLine;
 pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;
-pub use space::{Margin, Padding, PdfObjectSpace};
 pub use text::PdfObjectText;
 
 use mlua::prelude::*;

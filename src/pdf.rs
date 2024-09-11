@@ -25,9 +25,11 @@ macro_rules! raw_get {
     }};
 }
 
+mod common;
 mod config;
 mod object;
 
+pub use common::*;
 pub use config::*;
 pub use object::*;
 
@@ -69,9 +71,11 @@ impl<'lua> IntoLua<'lua> for Pdf {
         define_object_constructor!("text", PdfObjectText);
         table.raw_set("object", object)?;
 
+        let page = lua.create_table()?;
         //todo!("create pdf.page.on_monthly(...)");
         //todo!("create pdf.page.on_weekly(...)");
         //todo!("create pdf.page.on_daily(...)");
+        table.raw_set("page", page)?;
 
         Ok(LuaValue::Table(table))
     }

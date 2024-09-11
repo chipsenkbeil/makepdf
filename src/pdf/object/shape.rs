@@ -1,4 +1,4 @@
-use super::{Margin, PdfObjectBounds, PdfObjectContext};
+use crate::pdf::{Margin, PdfBounds, PdfObjectContext};
 use mlua::prelude::*;
 use palette::Srgb;
 
@@ -7,7 +7,7 @@ use palette::Srgb;
 pub struct PdfObjectShape {
     pub color: Srgb,
     pub margin: Option<Margin>,
-    pub bounds: PdfObjectBounds,
+    pub bounds: PdfBounds,
     pub thickness: f32,
     pub style: bool,
 }
