@@ -40,6 +40,15 @@ impl PdfBounds {
     pub fn to_coords(&self) -> (Mm, Mm, Mm, Mm) {
         (self.ll.x, self.ll.y, self.ur.x, self.ur.y)
     }
+
+    /// Adds bounds fields to an existing Lua table.
+    pub fn add_to_table(&self, table: &LuaTable) -> LuaResult<()> {
+        table.raw_set("llx", self.ll.x.0)?;
+        table.raw_set("lly", self.ll.y.0)?;
+        table.raw_set("urx", self.ur.x.0)?;
+        table.raw_set("ury", self.ur.y.0)?;
+        Ok(())
+    }
 }
 
 impl<'lua> IntoLua<'lua> for PdfBounds {
@@ -47,10 +56,7 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("llx", self.ll.x.0)?;
-        table.raw_set("lly", self.ll.y.0)?;
-        table.raw_set("urx", self.ur.x.0)?;
-        table.raw_set("ury", self.ur.y.0)?;
+        self.add_to_table(&table)?;
 
         Ok(LuaValue::Table(table))
     }

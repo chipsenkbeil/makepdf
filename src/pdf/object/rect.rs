@@ -31,7 +31,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("bounds", self.bounds)?;
+        self.bounds.add_to_table(&table)?;
         table.raw_set("color", self.color)?;
 
         Ok(LuaValue::Table(table))
@@ -40,12 +40,15 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
 
 impl<'lua> FromLua<'lua> for PdfObjectRect {
     #[inline]
-    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+    fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {
-            LuaValue::Table(table) => Ok(Self {
-                bounds: raw_get!(table, "bounds")?,
-                color: raw_get!(table, "color")?,
-            }),
+            LuaValue::Table(table) => {
+                let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
+                Ok(Self {
+                    bounds,
+                    color: raw_get!(table, "color")?,
+                })
+            }
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
                 to: "pdf.object.rect",

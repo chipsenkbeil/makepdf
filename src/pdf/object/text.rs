@@ -97,7 +97,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("bounds", self.bounds)?;
+        self.bounds.add_to_table(&table)?;
         table.raw_set("color", self.color)?;
         table.raw_set("text", self.text)?;
         table.raw_set("size", self.size)?;
@@ -108,14 +108,17 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
 
 impl<'lua> FromLua<'lua> for PdfObjectText {
     #[inline]
-    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+    fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {
-            LuaValue::Table(table) => Ok(Self {
-                bounds: raw_get!(table, "bounds")?,
-                color: raw_get!(table, "color")?,
-                text: raw_get!(table, "text")?,
-                size: raw_get!(table, "size")?,
-            }),
+            LuaValue::Table(table) => {
+                let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
+                Ok(Self {
+                    bounds,
+                    color: raw_get!(table, "color")?,
+                    text: raw_get!(table, "text")?,
+                    size: raw_get!(table, "size")?,
+                })
+            }
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
                 to: "pdf.object.text",

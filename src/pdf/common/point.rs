@@ -18,6 +18,13 @@ impl PdfPoint {
     pub fn to_coords(&self) -> (Mm, Mm) {
         (self.x, self.y)
     }
+
+    /// Adds point fields to an existing Lua table.
+    pub fn add_to_table(&self, table: &LuaTable) -> LuaResult<()> {
+        table.raw_set("x", self.x.0)?;
+        table.raw_set("y", self.y.0)?;
+        Ok(())
+    }
 }
 
 impl From<PdfPoint> for Point {
@@ -30,10 +37,7 @@ impl<'lua> IntoLua<'lua> for PdfPoint {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
-
-        table.raw_set("x", self.x.0)?;
-        table.raw_set("y", self.y.0)?;
-
+        self.add_to_table(&table)?;
         Ok(LuaValue::Table(table))
     }
 }
