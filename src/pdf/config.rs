@@ -1,6 +1,7 @@
 mod page;
 mod planner;
 
+use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
 
 pub use page::PagePdfConfig;
@@ -49,9 +50,9 @@ impl<'lua> FromLua<'lua> for PdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                planner: raw_get!(table, "planner")?,
-                page: raw_get!(table, "page")?,
-                script: raw_get!(table, "script")?,
+                planner: table.raw_get_ext("planner")?,
+                page: table.raw_get_ext("page")?,
+                script: table.raw_get_ext("script")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

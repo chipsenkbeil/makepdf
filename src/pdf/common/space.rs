@@ -1,3 +1,4 @@
+use crate::PdfLuaTableExt;
 use mlua::prelude::*;
 use printpdf::Mm;
 
@@ -32,10 +33,10 @@ impl<'lua> FromLua<'lua> for PdfSpace {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                top: Mm(raw_get!(table, "top")?),
-                left: Mm(raw_get!(table, "left")?),
-                right: Mm(raw_get!(table, "right")?),
-                bottom: Mm(raw_get!(table, "bottom")?),
+                top: Mm(table.raw_get_ext("top")?),
+                left: Mm(table.raw_get_ext("left")?),
+                right: Mm(table.raw_get_ext("right")?),
+                bottom: Mm(table.raw_get_ext("bottom")?),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

@@ -2,6 +2,7 @@ mod daily;
 mod monthly;
 mod weekly;
 
+use crate::pdf::PdfLuaTableExt;
 use chrono::offset::Local;
 use chrono::Datelike;
 use mlua::prelude::*;
@@ -58,10 +59,10 @@ impl<'lua> FromLua<'lua> for PlannerPdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                year: raw_get!(table, "year")?,
-                monthly: raw_get!(table, "monthly")?,
-                weekly: raw_get!(table, "weekly")?,
-                daily: raw_get!(table, "daily")?,
+                year: table.raw_get_ext("year")?,
+                monthly: table.raw_get_ext("monthly")?,
+                weekly: table.raw_get_ext("weekly")?,
+                daily: table.raw_get_ext("daily")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

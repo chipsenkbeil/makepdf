@@ -1,3 +1,4 @@
+use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
 
 /// Monthly planner-specific configuration for PDFs.
@@ -30,7 +31,7 @@ impl<'lua> FromLua<'lua> for MonthlyPlannerPdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                enabled: raw_get!(table, "enabled")?,
+                enabled: table.raw_get_ext("enabled")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

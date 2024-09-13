@@ -8,6 +8,7 @@ pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;
 pub use text::PdfObjectText;
 
+use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
 use owned_ttf_parser::Face;
 use printpdf::{IndirectFontRef, PdfLayerReference};
@@ -82,31 +83,29 @@ impl<'lua> FromLua<'lua> for PdfObject {
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         let from = value.type_name();
         match value {
-            LuaValue::Table(table) => {
-                match raw_get_wrap!(table.raw_get::<_, String>("type"), "type")?.as_str() {
-                    "line" => Ok(Self::Line(PdfObjectLine::from_lua(
-                        LuaValue::Table(table),
-                        lua,
-                    )?)),
-                    "rect" => Ok(Self::Rect(PdfObjectRect::from_lua(
-                        LuaValue::Table(table),
-                        lua,
-                    )?)),
-                    "shape" => Ok(Self::Shape(PdfObjectShape::from_lua(
-                        LuaValue::Table(table),
-                        lua,
-                    )?)),
-                    "text" => Ok(Self::Text(PdfObjectText::from_lua(
-                        LuaValue::Table(table),
-                        lua,
-                    )?)),
-                    ty => Err(LuaError::FromLuaConversionError {
-                        from,
-                        to: "pdf.object",
-                        message: Some(format!("unknown type: {ty}")),
-                    }),
-                }
-            }
+            LuaValue::Table(table) => match table.raw_get_ext::<_, String>("type")?.as_str() {
+                "line" => Ok(Self::Line(PdfObjectLine::from_lua(
+                    LuaValue::Table(table),
+                    lua,
+                )?)),
+                "rect" => Ok(Self::Rect(PdfObjectRect::from_lua(
+                    LuaValue::Table(table),
+                    lua,
+                )?)),
+                "shape" => Ok(Self::Shape(PdfObjectShape::from_lua(
+                    LuaValue::Table(table),
+                    lua,
+                )?)),
+                "text" => Ok(Self::Text(PdfObjectText::from_lua(
+                    LuaValue::Table(table),
+                    lua,
+                )?)),
+                ty => Err(LuaError::FromLuaConversionError {
+                    from,
+                    to: "pdf.object",
+                    message: Some(format!("unknown type: {ty}")),
+                }),
+            },
             _ => Err(LuaError::FromLuaConversionError {
                 from,
                 to: "pdf.object",

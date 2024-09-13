@@ -1,3 +1,4 @@
+use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
 use printpdf::{Mm, Point};
 
@@ -51,8 +52,8 @@ impl<'lua> FromLua<'lua> for PdfPoint {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                x: Mm(raw_get!(table, 0).or_else(|_| raw_get!(table, "x"))?),
-                y: Mm(raw_get!(table, 1).or_else(|_| raw_get!(table, "y"))?),
+                x: Mm(table.raw_get_ext(0).or_else(|_| table.raw_get_ext("x"))?),
+                y: Mm(table.raw_get_ext(1).or_else(|_| table.raw_get_ext("y"))?),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

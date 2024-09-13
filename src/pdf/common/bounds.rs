@@ -1,4 +1,4 @@
-use crate::pdf::PdfPoint;
+use crate::pdf::{PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
 use printpdf::Mm;
 
@@ -72,12 +72,12 @@ impl<'lua> FromLua<'lua> for PdfBounds {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 ll: PdfPoint::new(
-                    Mm(raw_get!(table, 0).or_else(|_| raw_get!(table, "llx"))?),
-                    Mm(raw_get!(table, 1).or_else(|_| raw_get!(table, "lly"))?),
+                    Mm(table.raw_get_ext(0).or_else(|_| table.raw_get_ext("llx"))?),
+                    Mm(table.raw_get_ext(1).or_else(|_| table.raw_get_ext("lly"))?),
                 ),
                 ur: PdfPoint::new(
-                    Mm(raw_get!(table, 2).or_else(|_| raw_get!(table, "urx"))?),
-                    Mm(raw_get!(table, 3).or_else(|_| raw_get!(table, "ury"))?),
+                    Mm(table.raw_get_ext(2).or_else(|_| table.raw_get_ext("urx"))?),
+                    Mm(table.raw_get_ext(3).or_else(|_| table.raw_get_ext("ury"))?),
                 ),
             }),
             _ => Err(LuaError::FromLuaConversionError {

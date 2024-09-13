@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfLuaTableExt, PdfObjectContext};
 use mlua::prelude::*;
 use printpdf::path::{PaintMode, WindingOrder};
 use printpdf::Polygon;
@@ -40,8 +40,8 @@ impl<'lua> FromLua<'lua> for PdfObjectShape {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                bounds: raw_get!(table, "bounds")?,
-                color: raw_get!(table, "color")?,
+                bounds: table.raw_get_ext("bounds")?,
+                color: table.raw_get_ext("color")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

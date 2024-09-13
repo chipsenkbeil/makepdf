@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfLuaTableExt, PdfObjectContext};
 use mlua::prelude::*;
 use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
@@ -114,9 +114,9 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
                 let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
                 Ok(Self {
                     bounds,
-                    color: raw_get!(table, "color")?,
-                    text: raw_get!(table, "text")?,
-                    size: raw_get!(table, "size")?,
+                    color: table.raw_get_ext("color")?,
+                    text: table.raw_get_ext("text")?,
+                    size: table.raw_get_ext("size")?,
                 })
             }
             _ => Err(LuaError::FromLuaConversionError {

@@ -1,30 +1,3 @@
-macro_rules! raw_get_wrap {
-    ($e:expr, $key:expr) => {{
-        $e.map_err(|x| match x {
-            ::mlua::Error::FromLuaConversionError { from, to, message } => {
-                ::mlua::Error::FromLuaConversionError {
-                    from,
-                    to,
-                    message: Some(format!(
-                        "key '{}'{}",
-                        $key,
-                        message
-                            .map(|m| format!(": {m}"))
-                            .unwrap_or_else(String::new)
-                    )),
-                }
-            }
-            x => x,
-        })
-    }};
-}
-
-macro_rules! raw_get {
-    ($table:expr, $key:expr) => {{
-        raw_get_wrap!($table.raw_get($key), $key)
-    }};
-}
-
 mod common;
 mod config;
 mod object;
@@ -107,7 +80,7 @@ impl<'lua> FromLua<'lua> for Pdf {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                config: raw_get!(table, "config")?,
+                config: table.raw_get_ext("config")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

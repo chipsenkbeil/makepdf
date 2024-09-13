@@ -1,3 +1,4 @@
+use crate::PdfLuaTableExt;
 use mlua::prelude::*;
 use printpdf::{Mm, Px};
 
@@ -48,10 +49,10 @@ impl<'lua> FromLua<'lua> for PagePdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                dpi: raw_get!(table, "dpi")?,
-                font: raw_get!(table, "font")?,
-                width: Mm(raw_get!(table, "width")?),
-                height: Mm(raw_get!(table, "height")?),
+                dpi: table.raw_get_ext("dpi")?,
+                font: table.raw_get_ext("font")?,
+                width: Mm(table.raw_get_ext("width")?),
+                height: Mm(table.raw_get_ext("height")?),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

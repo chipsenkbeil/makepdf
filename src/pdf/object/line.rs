@@ -1,4 +1,4 @@
-use crate::pdf::{PdfColor, PdfObjectContext, PdfPoint};
+use crate::pdf::{PdfColor, PdfLuaTableExt, PdfObjectContext, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
 
@@ -95,10 +95,10 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                color: raw_get!(table, "color")?,
-                points: raw_get!(table, "points")?,
-                thickness: raw_get!(table, "thickness")?,
-                style: raw_get!(table, "style")?,
+                color: table.raw_get_ext("color")?,
+                points: table.raw_get_ext("points")?,
+                thickness: table.raw_get_ext("thickness")?,
+                style: table.raw_get_ext("style")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfLuaTableExt, PdfObjectContext};
 use mlua::prelude::*;
 use printpdf::{
     path::{PaintMode, WindingOrder},
@@ -46,7 +46,7 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                 let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
                 Ok(Self {
                     bounds,
-                    color: raw_get!(table, "color")?,
+                    color: table.raw_get_ext("color")?,
                 })
             }
             _ => Err(LuaError::FromLuaConversionError {
