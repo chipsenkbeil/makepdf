@@ -1,13 +1,13 @@
 [package]
-name = "mpdf"
+name = "makepdf"
 version = "0.1.0"
 edition = "2021"
 description = "Tool to make PDFs via Lua scripts for use with e-ink devices"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 categories = ["command-line-utilities"]
 keywords = ["cli", "pdf", "eink", "lua"]
-homepage = "https://github.com/chipsenkbeil/mpdf"
-repository = "https://github.com/chipsenkbeil/mpdf"
+homepage = "https://github.com/chipsenkbeil/makepdf"
+repository = "https://github.com/chipsenkbeil/makepdf"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 

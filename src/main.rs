@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use mpdf::{Engine, PdfConfig, PdfConfigPage, PdfConfigPlanner};
+use makepdf::{Engine, PdfConfig, PdfConfigPage, PdfConfigPlanner};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -49,7 +49,7 @@ enum Commands {
         /// Path to the script to use to build the PDF.
         ///
         /// Internal scripts are referenced using a special syntax of
-        /// `mpdf:{NAME}` where the name is prefixed with `mpdf:`.
+        /// `makepdf:{NAME}` where the name is prefixed with `makepdf:`.
         #[arg(short, long, default_value_t = PdfConfig::default().script)]
         script: String,
 

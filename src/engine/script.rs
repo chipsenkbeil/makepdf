@@ -13,7 +13,7 @@ pub struct Script {
 
 impl Script {
     /// Prefix used for internal script access.
-    const PREFIX: &'static str = "mpdf:";
+    const PREFIX: &'static str = "makepdf:";
 
     /// Loads a script from a file (or internally) to be executed. The act of loading the script
     /// does not even parse the code, only loading it into memory.

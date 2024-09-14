@@ -1,4 +1,4 @@
-# mpdf
+# makepdf
 
 Build PDF documents via [Luau](https://luau.org/) scripts, designed to make
 creating planners for e-ink devices.
@@ -7,16 +7,16 @@ creating planners for e-ink devices.
 
 ```sh
 # Make a planner for the current year using the default script
-mpdf make
+makepdf make
 
 # Make a planner for the current year using the specified script
-mpdf make --script /path/to/script.lua
+makepdf make --script /path/to/script.lua
 
 # Make a planner for a different year using the specified script
-mpdf make --year 2035 /path/to/script.lua
+makepdf make --year 2035 /path/to/script.lua
 
 # Make a planner for a specific device dimensions using the specified script
-mpdf make --dimensions 1404:1879px --script /path/to/script.lua
+makepdf make --dimensions 1404:1879px --script /path/to/script.lua
 ```
 
 ## License

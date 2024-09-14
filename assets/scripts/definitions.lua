@@ -1,5 +1,5 @@
 ---@meta
----Primary definition file representing mpdf's Lua library.
+---Primary definition file representing makepdf's Lua library.
 
 pdf = {}
 

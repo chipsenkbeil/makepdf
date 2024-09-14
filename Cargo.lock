@@ -452,6 +452,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "makepdf"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "mlua",
+ "opener",
+ "owned_ttf_parser",
+ "palette",
+ "phf",
+ "printpdf",
+]
+
+[[package]]
 name = "md-5"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -516,21 +531,6 @@ dependencies = [
  "quote",
  "regex",
  "syn 2.0.77",
-]
-
-[[package]]
-name = "mpdf"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "mlua",
- "opener",
- "owned_ttf_parser",
- "palette",
- "phf",
- "printpdf",
 ]
 
 [[package]]

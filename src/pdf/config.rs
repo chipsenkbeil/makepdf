@@ -18,7 +18,7 @@ pub struct PdfConfig {
     pub page: PdfConfigPage,
     /// Configuration tied to a PDF planner
     pub planner: PdfConfigPlanner,
-    /// Path or name of script (e.g. `mpdf:panda`)
+    /// Path or name of script (e.g. `makepdf:panda`)
     pub script: String,
 }
 
@@ -27,7 +27,7 @@ impl Default for PdfConfig {
         Self {
             page: Default::default(),
             planner: Default::default(),
-            script: String::from("mpdf:panda"),
+            script: String::from("makepdf:panda"),
         }
     }
 }
