@@ -16,7 +16,7 @@ makepdf make --script /path/to/script.lua
 makepdf make --year 2035 /path/to/script.lua
 
 # Make a planner for a specific device dimensions using the specified script
-makepdf make --dimensions 1404:1879px --script /path/to/script.lua
+makepdf make --dimensions 1404x1879px --script /path/to/script.lua
 ```
 
 ## License
