@@ -22,7 +22,8 @@ impl Engine {
     /// the engine that can be used to save the PDF externally.
     pub fn build(config: PdfConfig) -> anyhow::Result<Self> {
         // Execute a script to populate the information we need to generate a PDF
-        let mut script = Script::load(&config.script).context("Failed to load script")?;
+        let mut script =
+            Script::load_from_script(&config.script).context("Failed to load script")?;
         script
             .set_global("pdf", Pdf::new(config))
             .context("Failed to initialize PDF script global")?;

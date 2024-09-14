@@ -44,3 +44,43 @@ impl<'lua> FromLua<'lua> for PdfWindingOrder {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::PdfUtils;
+    use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("even_odd"))
+                .eval::<PdfWindingOrder>()
+                .unwrap(),
+            PdfWindingOrder(WindingOrder::EvenOdd),
+        );
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("non_zero"))
+                .eval::<PdfWindingOrder>()
+                .unwrap(),
+            PdfWindingOrder(WindingOrder::NonZero),
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        let even_odd_winding_order = PdfWindingOrder(WindingOrder::EvenOdd);
+        let non_zero_winding_order = PdfWindingOrder(WindingOrder::NonZero);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($even_odd_winding_order, "even_odd")
+                u.assert_deep_equal($non_zero_winding_order, "non_zero")
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+}

@@ -48,3 +48,61 @@ impl<'lua> FromLua<'lua> for PdfPaintMode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::PdfUtils;
+    use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("clip"))
+                .eval::<PdfPaintMode>()
+                .unwrap(),
+            PdfPaintMode(PaintMode::Clip),
+        );
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("fill"))
+                .eval::<PdfPaintMode>()
+                .unwrap(),
+            PdfPaintMode(PaintMode::Fill),
+        );
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("fill_stroke"))
+                .eval::<PdfPaintMode>()
+                .unwrap(),
+            PdfPaintMode(PaintMode::FillStroke),
+        );
+        assert_eq!(
+            Lua::new()
+                .load(chunk!("stroke"))
+                .eval::<PdfPaintMode>()
+                .unwrap(),
+            PdfPaintMode(PaintMode::Stroke),
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        let clip_mode = PdfPaintMode(PaintMode::Clip);
+        let fill_mode = PdfPaintMode(PaintMode::Fill);
+        let fill_stroke_mode = PdfPaintMode(PaintMode::FillStroke);
+        let stroke_mode = PdfPaintMode(PaintMode::Stroke);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($clip_mode, "clip")
+                u.assert_deep_equal($fill_mode, "fill")
+                u.assert_deep_equal($fill_stroke_mode, "fill_stroke")
+                u.assert_deep_equal($stroke_mode, "stroke")
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+}

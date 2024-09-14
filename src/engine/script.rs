@@ -15,9 +15,10 @@ impl Script {
     /// Prefix used for internal script access.
     const PREFIX: &'static str = "makepdf:";
 
-    /// Loads a script from a file (or internally) to be executed. The act of loading the script
-    /// does not even parse the code, only loading it into memory.
-    pub fn load(script: impl AsRef<str>) -> anyhow::Result<Self> {
+    /// Loads a script from a file (or internally) to be executed.
+    ///
+    /// The act of loading the script does not even parse the code, only loading it into memory.
+    pub fn load_from_script(script: impl AsRef<str>) -> anyhow::Result<Self> {
         let script = script.as_ref();
 
         // Load our script either from our internal map or an external file
@@ -30,12 +31,22 @@ impl Script {
                 .with_context(|| format!("Failed to load script '{}'", script))?,
         };
 
+        Self::load_from_bytes(bytes)
+    }
+
+    /// Loads a script for a series of bytes.
+    ///
+    /// The act of loading the bytes does not even parse the code, only loading it into memory.
+    pub fn load_from_bytes(bytes: impl IntoIterator<Item = u8>) -> anyhow::Result<Self> {
         // Create a new Lua instance in sandbox mode (should not fail with Luau)
         let lua = Lua::new();
         lua.sandbox(true)
             .context("Failed to set sandbox mode on Lua runtime")?;
 
-        Ok(Self { lua, bytes })
+        Ok(Self {
+            lua,
+            bytes: bytes.into_iter().collect(),
+        })
     }
 
     /// Executes the script. This will eagerly parse and execute the code.

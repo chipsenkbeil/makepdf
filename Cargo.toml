@@ -28,3 +28,4 @@ mlua = { version = "0.9.9", features = ["luau", "macros", "unstable"] }
 phf = { version = "0.11.2", features = ["macros"] }
 #printpdf = "0.7.0"
 printpdf = { git = "https://github.com/chipsenkbeil/printpdf.git" }
+tailcall = "1.0.1"

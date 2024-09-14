@@ -11,13 +11,34 @@ pub struct PdfPoint {
 
 impl PdfPoint {
     /// Creates a new point at x, y.
-    pub fn new(x: Mm, y: Mm) -> Self {
+    #[inline]
+    pub const fn new(x: Mm, y: Mm) -> Self {
+        Self::from_coords(x, y)
+    }
+
+    /// Converts coordinates into point.
+    #[inline]
+    pub const fn from_coords(x: Mm, y: Mm) -> Self {
         Self { x, y }
     }
 
-    /// Converts bounds into (x, y).
-    pub fn to_coords(&self) -> (Mm, Mm) {
+    /// Converts coordinates into point.
+    #[inline]
+    pub const fn from_coords_f32(x: f32, y: f32) -> Self {
+        Self::from_coords(Mm(x), Mm(y))
+    }
+
+    /// Converts point into (x, y).
+    #[inline]
+    pub const fn to_coords(&self) -> (Mm, Mm) {
         (self.x, self.y)
+    }
+
+    /// Converts point into (x, y).
+    #[inline]
+    pub const fn to_coords_f32(&self) -> (f32, f32) {
+        let (x, y) = self.to_coords();
+        (x.0, y.0)
     }
 
     /// Adds point fields to an existing Lua table.
@@ -71,5 +92,45 @@ impl<'lua> FromLua<'lua> for PdfPoint {
                 message: None,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::PdfUtils;
+    use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        let point = PdfPoint::from_coords_f32(1.0, 2.0);
+
+        // Can convert { number, number } into point
+        assert_eq!(
+            Lua::new().load(chunk!({1, 2})).eval::<PdfPoint>().unwrap(),
+            point,
+        );
+
+        // Can convert { x, y } into point
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ x = 1, y = 2 }))
+                .eval::<PdfPoint>()
+                .unwrap(),
+            point,
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        let point = PdfPoint::from_coords_f32(1.0, 2.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($point, { x = 1,  y = 2 })
+            })
+            .exec()
+            .expect("Assertion failed");
     }
 }
