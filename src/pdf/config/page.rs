@@ -1,4 +1,4 @@
-use crate::PdfLuaTableExt;
+use crate::pdf::{PdfColor, PdfLuaTableExt, PdfObjectLineStyle};
 use mlua::prelude::*;
 use printpdf::{Mm, Px};
 
@@ -6,18 +6,27 @@ use printpdf::{Mm, Px};
 ///
 /// Supports converting to & from a Lua table.
 #[derive(Clone, Debug)]
-pub struct PagePdfConfig {
-    /// DPI of a page
+pub struct PdfConfigPage {
+    /// DPI of a page.
     pub dpi: f32,
-    /// Optional font for the PDF
+    /// Optional font for the PDF.
     pub font: Option<String>,
-    /// Width of a page in millimeters
+    /// Width of a page in millimeters.
     pub width: Mm,
-    /// Height of a page in millimeters
+    /// Height of a page in millimeters.
     pub height: Mm,
+
+    /// Default fill color used when none specified.
+    pub fill_color: PdfColor,
+    /// Default outline color used when none specified.
+    pub outline_color: PdfColor,
+    /// Default thickness for an outline when none specified.
+    pub outline_thickness: f32,
+    /// Default style of loines when none specified.
+    pub line_style: PdfObjectLineStyle,
 }
 
-impl Default for PagePdfConfig {
+impl Default for PdfConfigPage {
     /// Page defaults are modeled after the Supernote A6 X2 Nomad.
     fn default() -> Self {
         let dpi = 300.0;
@@ -26,33 +35,52 @@ impl Default for PagePdfConfig {
             font: None,
             width: Px(1404).into_pt(dpi).into(),
             height: Px(1872).into_pt(dpi).into(),
+
+            fill_color: PdfColor::black(),
+            outline_color: PdfColor::black(),
+            outline_thickness: 1.0,
+            line_style: PdfObjectLineStyle::Solid,
         }
     }
 }
 
-impl<'lua> IntoLua<'lua> for PagePdfConfig {
+impl<'lua> IntoLua<'lua> for PdfConfigPage {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
+        // Configurations for page
         table.raw_set("dpi", self.dpi)?;
         table.raw_set("font", self.font)?;
         table.raw_set("width", self.width.0)?;
         table.raw_set("height", self.height.0)?;
 
+        // Defaults for page
+        table.raw_set("fill_color", self.fill_color)?;
+        table.raw_set("outline_color", self.outline_color)?;
+        table.raw_set("outline_thickness", self.outline_thickness)?;
+        table.raw_set("line_style", self.line_style)?;
+
         Ok(LuaValue::Table(table))
     }
 }
 
-impl<'lua> FromLua<'lua> for PagePdfConfig {
+impl<'lua> FromLua<'lua> for PdfConfigPage {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
+                // Configurations for page
                 dpi: table.raw_get_ext("dpi")?,
                 font: table.raw_get_ext("font")?,
                 width: Mm(table.raw_get_ext("width")?),
                 height: Mm(table.raw_get_ext("height")?),
+
+                // Defaults for page
+                fill_color: table.raw_get_ext("fill_color")?,
+                outline_color: table.raw_get_ext("outline_color")?,
+                outline_thickness: table.raw_get_ext("outline_thickness")?,
+                line_style: table.raw_get_ext("line_style")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
@@ -63,7 +91,7 @@ impl<'lua> FromLua<'lua> for PagePdfConfig {
     }
 }
 
-impl PagePdfConfig {
+impl PdfConfigPage {
     /// Creates a string in the form of `{WIDTH}x{HEIGHT}px`
     /// for the size represented within the config.
     pub fn to_px_size_string(&self) -> String {

@@ -4,9 +4,9 @@ mod planner;
 use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
 
-pub use page::PagePdfConfig;
+pub use page::PdfConfigPage;
 pub use planner::{
-    DailyPlannerPdfConfig, MonthlyPlannerPdfConfig, PlannerPdfConfig, WeeklyPlannerPdfConfig,
+    PdfConfigDailyPlanner, PdfConfigMonthlyPlanner, PdfConfigPlanner, PdfConfigWeeklyPlanner,
 };
 
 /// Configuration for PDFs.
@@ -15,9 +15,9 @@ pub use planner::{
 #[derive(Clone, Debug)]
 pub struct PdfConfig {
     /// Configuration tied to a PDF page
-    pub page: PagePdfConfig,
+    pub page: PdfConfigPage,
     /// Configuration tied to a PDF planner
-    pub planner: PlannerPdfConfig,
+    pub planner: PdfConfigPlanner,
     /// Path or name of script (e.g. `mpdf:panda`)
     pub script: String,
 }
@@ -52,7 +52,7 @@ impl<'lua> FromLua<'lua> for PdfConfig {
             LuaValue::Table(table) => Ok(Self {
                 planner: table.raw_get_ext("planner")?,
                 page: table.raw_get_ext("page")?,
-                script: table.raw_get_ext("script")?,
+                script: table.raw_get_ext("script").unwrap_or_default(),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

@@ -1,65 +1,36 @@
-use crate::pdf::{PdfColor, PdfLuaTableExt, PdfObjectContext, PdfPoint};
+mod style;
+
+pub use style::PdfObjectLineStyle;
+
+use crate::pdf::{PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
-
-/// Style to use with the line.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum PdfObjectLineStyle {
-    Solid,
-    Dashed,
-}
-
-impl<'lua> IntoLua<'lua> for PdfObjectLineStyle {
-    #[inline]
-    fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        lua.create_string(match self {
-            Self::Solid => "solid",
-            Self::Dashed => "dashed",
-        })
-        .map(LuaValue::String)
-    }
-}
-
-impl<'lua> FromLua<'lua> for PdfObjectLineStyle {
-    #[inline]
-    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
-        let from = value.type_name();
-        match value {
-            LuaValue::String(s) => match s.to_string_lossy().as_ref() {
-                "solid" => Ok(Self::Solid),
-                "dashed" => Ok(Self::Dashed),
-                ty => Err(LuaError::FromLuaConversionError {
-                    from,
-                    to: "pdf.object.line.style",
-                    message: Some(format!("unknown type: {ty}")),
-                }),
-            },
-            _ => Err(LuaError::FromLuaConversionError {
-                from,
-                to: "pdf.object.line.style",
-                message: None,
-            }),
-        }
-    }
-}
 
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug)]
 pub struct PdfObjectLine {
-    pub color: PdfColor,
+    pub color: Option<PdfColor>,
     pub points: Vec<PdfPoint>,
-    pub thickness: f32,
-    pub style: PdfObjectLineStyle,
+    pub thickness: Option<f32>,
+    pub style: Option<PdfObjectLineStyle>,
 }
 
 impl PdfObjectLine {
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
-        ctx.layer.set_fill_color(self.color.into());
-        ctx.layer.set_outline_color(self.color.into());
-        ctx.layer.set_outline_thickness(self.thickness);
+    pub fn draw(&self, ctx: &PdfContext<'_>) {
+        // Get optional values, setting defaults when not specified
+        let color = self.color.unwrap_or(ctx.config.page.fill_color);
+        let thickness = self.thickness.unwrap_or(ctx.config.page.outline_thickness);
+        let style = self.style.unwrap_or(ctx.config.page.line_style);
 
-        if let PdfObjectLineStyle::Dashed = self.style {
+        // Set the color and thickness of our line
+        ctx.layer.set_fill_color(color.into());
+        ctx.layer.set_outline_color(color.into());
+        ctx.layer.set_outline_thickness(thickness);
+
+        // If the line should be dashed, set the appropriate styling information,
+        // otherwise we reset to a default line dash pattern
+        if let PdfObjectLineStyle::Dashed = style {
             ctx.layer.set_line_cap_style(LineCapStyle::Round);
             ctx.layer.set_line_dash_pattern(LineDashPattern {
                 dash_1: Some(5),

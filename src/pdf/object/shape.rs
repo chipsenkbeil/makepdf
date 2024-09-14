@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLuaTableExt, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt};
 use mlua::prelude::*;
 use printpdf::path::{PaintMode, WindingOrder};
 use printpdf::Polygon;
@@ -12,7 +12,7 @@ pub struct PdfObjectShape {
 
 impl PdfObjectShape {
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
+    pub fn draw(&self, ctx: &PdfContext<'_>) {
         ctx.layer.set_fill_color(self.color.into());
         ctx.layer.set_outline_color(self.color.into());
         ctx.layer.add_polygon(Polygon {

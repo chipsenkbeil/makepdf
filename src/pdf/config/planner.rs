@@ -7,29 +7,29 @@ use chrono::offset::Local;
 use chrono::Datelike;
 use mlua::prelude::*;
 
-pub use daily::DailyPlannerPdfConfig;
-pub use monthly::MonthlyPlannerPdfConfig;
-pub use weekly::WeeklyPlannerPdfConfig;
+pub use daily::PdfConfigDailyPlanner;
+pub use monthly::PdfConfigMonthlyPlanner;
+pub use weekly::PdfConfigWeeklyPlanner;
 
 /// Planner-specific configuration for PDFs.
 ///
 /// Supports converting to & from a Lua table.
 #[derive(Clone, Debug)]
-pub struct PlannerPdfConfig {
+pub struct PdfConfigPlanner {
     /// Year associated with planner
     pub year: i32,
 
     /// Configuration tied to monthly planner pages
-    pub monthly: MonthlyPlannerPdfConfig,
+    pub monthly: PdfConfigMonthlyPlanner,
 
     /// Configuration tied to weekly planner pages
-    pub weekly: WeeklyPlannerPdfConfig,
+    pub weekly: PdfConfigWeeklyPlanner,
 
     /// Configuration tied to daily planner pages
-    pub daily: DailyPlannerPdfConfig,
+    pub daily: PdfConfigDailyPlanner,
 }
 
-impl Default for PlannerPdfConfig {
+impl Default for PdfConfigPlanner {
     fn default() -> Self {
         Self {
             year: Local::now().year(),
@@ -40,7 +40,7 @@ impl Default for PlannerPdfConfig {
     }
 }
 
-impl<'lua> IntoLua<'lua> for PlannerPdfConfig {
+impl<'lua> IntoLua<'lua> for PdfConfigPlanner {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
@@ -54,7 +54,7 @@ impl<'lua> IntoLua<'lua> for PlannerPdfConfig {
     }
 }
 
-impl<'lua> FromLua<'lua> for PlannerPdfConfig {
+impl<'lua> FromLua<'lua> for PdfConfigPlanner {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {

@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use mpdf::{Engine, PagePdfConfig, PdfConfig, PlannerPdfConfig};
+use mpdf::{Engine, PdfConfig, PdfConfigPage, PdfConfigPlanner};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -27,11 +27,11 @@ enum Commands {
         ///
         /// Note the the DPI will influence conversion rates from pixels to
         /// PDF millimeters.
-        #[arg(short, long, default_value_t = PagePdfConfig::default().to_px_size_string())]
+        #[arg(short, long, default_value_t = PdfConfigPage::default().to_px_size_string())]
         dimensions: String,
 
         /// DPI to use for the created PDF.
-        #[arg(long, default_value_t = PagePdfConfig::default().dpi)]
+        #[arg(long, default_value_t = PdfConfigPage::default().dpi)]
         dpi: f32,
 
         /// Path to custom font to use in place of the default Jetbrains Mono font.
@@ -54,7 +54,7 @@ enum Commands {
         script: String,
 
         /// Year to associate when running the PDF generation script.
-        #[arg(long, default_value_t = PlannerPdfConfig::default().year)]
+        #[arg(long, default_value_t = PdfConfigPlanner::default().year)]
         year: i32,
     },
 }
@@ -72,16 +72,17 @@ fn main() -> anyhow::Result<()> {
             script,
             year,
         } => {
-            let (width, height) = PagePdfConfig::parse_size(&dimensions, dpi)?;
+            let (width, height) = PdfConfigPage::parse_size(&dimensions, dpi)?;
 
             Engine::build(PdfConfig {
-                page: PagePdfConfig {
+                page: PdfConfigPage {
                     dpi,
                     font,
                     width,
                     height,
+                    ..Default::default()
                 },
-                planner: PlannerPdfConfig {
+                planner: PdfConfigPlanner {
                     year,
                     ..Default::default()
                 },

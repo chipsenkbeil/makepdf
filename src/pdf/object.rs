@@ -3,23 +3,13 @@ mod rect;
 mod shape;
 mod text;
 
-pub use line::PdfObjectLine;
+pub use line::{PdfObjectLine, PdfObjectLineStyle};
 pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;
 pub use text::PdfObjectText;
 
-use crate::pdf::PdfLuaTableExt;
+use crate::pdf::{PdfContext, PdfLuaTableExt};
 use mlua::prelude::*;
-use owned_ttf_parser::Face;
-use printpdf::{IndirectFontRef, PdfLayerReference};
-
-/// Context provided to a [`PdfObject`] in order to draw it.
-#[derive(Copy, Clone, Debug)]
-pub struct PdfObjectContext<'a> {
-    pub face: &'a Face<'a>,
-    pub font: &'a IndirectFontRef,
-    pub layer: &'a PdfLayerReference,
-}
 
 #[derive(Clone, Debug)]
 pub enum PdfObject {
@@ -41,7 +31,7 @@ impl PdfObject {
     }
 
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
+    pub fn draw(&self, ctx: &PdfContext<'_>) {
         match self {
             Self::Line(x) => x.draw(ctx),
             Self::Rect(x) => x.draw(ctx),

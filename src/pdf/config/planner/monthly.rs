@@ -5,17 +5,17 @@ use mlua::prelude::*;
 ///
 /// Supports converting to & from a Lua table.
 #[derive(Clone, Debug)]
-pub struct MonthlyPlannerPdfConfig {
+pub struct PdfConfigMonthlyPlanner {
     pub enabled: bool,
 }
 
-impl Default for MonthlyPlannerPdfConfig {
+impl Default for PdfConfigMonthlyPlanner {
     fn default() -> Self {
         Self { enabled: true }
     }
 }
 
-impl<'lua> IntoLua<'lua> for MonthlyPlannerPdfConfig {
+impl<'lua> IntoLua<'lua> for PdfConfigMonthlyPlanner {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
@@ -26,7 +26,7 @@ impl<'lua> IntoLua<'lua> for MonthlyPlannerPdfConfig {
     }
 }
 
-impl<'lua> FromLua<'lua> for MonthlyPlannerPdfConfig {
+impl<'lua> FromLua<'lua> for PdfConfigMonthlyPlanner {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {

@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLuaTableExt, PdfObjectContext};
+use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt};
 use mlua::prelude::*;
 use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
@@ -21,7 +21,7 @@ pub struct PdfObjectText {
 
 impl PdfObjectText {
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfObjectContext<'_>) {
+    pub fn draw(&self, ctx: &PdfContext<'_>) {
         let (llx, lly, urx, ury) = self.bounds.to_coords();
 
         // If given text, we'll populate within the middle of the bounds

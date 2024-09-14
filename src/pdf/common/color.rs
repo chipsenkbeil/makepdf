@@ -8,6 +8,33 @@ use std::str::FromStr;
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct PdfColor(Srgb);
 
+impl PdfColor {
+    /// Produces a traditional black color.
+    pub const fn black() -> Self {
+        Self(Srgb::new(0.0, 0.0, 0.0))
+    }
+
+    /// Produces a traditional blue color.
+    pub const fn blue() -> Self {
+        Self(Srgb::new(0.0, 0.0, 1.0))
+    }
+
+    /// Produces a traditional green color.
+    pub const fn green() -> Self {
+        Self(Srgb::new(0.0, 1.0, 0.0))
+    }
+
+    /// Produces a traditional red color.
+    pub const fn red() -> Self {
+        Self(Srgb::new(1.0, 0.0, 0.0))
+    }
+
+    /// Produces a traditional white color.
+    pub const fn white() -> Self {
+        Self(Srgb::new(1.0, 1.0, 1.0))
+    }
+}
+
 impl Deref for PdfColor {
     type Target = Srgb;
 
