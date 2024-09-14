@@ -1,4 +1,4 @@
-use crate::pdf::{PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
+use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
 use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
@@ -8,12 +8,26 @@ use printpdf::{GlyphMetrics, Mm, Pt};
 pub struct PdfObjectText {
     pub point: PdfPoint,
     pub text: String,
+    pub depth: Option<i64>,
     pub size: Option<f32>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
 }
 
 impl PdfObjectText {
+    /// Returns bounds for the text by calculating the width and height and applying to
+    /// get the upper-right point.
+    pub fn bounds(&self, ctx: PdfContext<'_>) -> PdfBounds {
+        let width = self.text_width(ctx);
+        let height = self.text_height(ctx);
+        PdfBounds::from_coords(
+            self.point.x,
+            self.point.y,
+            self.point.x + width,
+            self.point.y + height,
+        )
+    }
+
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         // Get optional values, setting defaults when not specified
@@ -29,7 +43,7 @@ impl PdfObjectText {
     }
 
     /// Returns the width of the text in millimeters for the given font face.
-    pub fn text_width(&self, ctx: &PdfContext<'_>) -> Mm {
+    pub fn text_width(&self, ctx: PdfContext<'_>) -> Mm {
         let size = self.size.unwrap_or(ctx.config.page.font_size);
         let units_per_em = ctx.face.units_per_em() as f64;
         let scale = size as f64 / units_per_em;
@@ -46,7 +60,7 @@ impl PdfObjectText {
     }
 
     /// Returns the height of the text in millimeters for the given font face.
-    pub fn text_height(&self, ctx: &PdfContext<'_>) -> Mm {
+    pub fn text_height(&self, ctx: PdfContext<'_>) -> Mm {
         let size = self.size.unwrap_or(ctx.config.page.font_size);
         let units_per_em = ctx.face.units_per_em() as f64;
         let ascender = ctx.face.ascender() as f64;
@@ -82,6 +96,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         self.point.add_to_table(&table)?;
         table.raw_set("text", self.text)?;
         table.raw_set("size", self.size)?;
+        table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
 
@@ -99,6 +114,7 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
                     point,
                     text: table.raw_get_ext("text")?,
                     size: table.raw_get_ext("size")?,
+                    depth: table.raw_get_ext("depth")?,
                     fill_color: table.raw_get_ext("fill_color")?,
                     outline_color: table.raw_get_ext("outline_color")?,
                 })

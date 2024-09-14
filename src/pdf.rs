@@ -95,9 +95,6 @@ impl<'lua> IntoLua<'lua> for Pdf {
 
         // TODO: Some notes on what to do next
         //
-        // 4. Add more defaults to page config including outline_color, fill_color, line style,
-        //    etc. to cover all of the fields for our objects such that everything is optional
-        //    except the position and - in the case of the text object - a string of text
         // 6. Think through how to make some object that can contain others (container?) and
         //    have PdfContext contain bounds representing the container, and a function that can
         //    translate the bounds or points of an object relative to the container

@@ -2,7 +2,7 @@ mod style;
 
 pub use style::PdfObjectLineStyle;
 
-use crate::pdf::{PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
+use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
 
@@ -10,6 +10,7 @@ use printpdf::{Line, LineCapStyle, LineDashPattern};
 #[derive(Clone, Debug)]
 pub struct PdfObjectLine {
     pub points: Vec<PdfPoint>,
+    pub depth: Option<i64>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
     pub thickness: Option<f32>,
@@ -17,6 +18,32 @@ pub struct PdfObjectLine {
 }
 
 impl PdfObjectLine {
+    /// Returns bounds for the line(s) by getting the lower and upper point ranges.
+    pub fn bounds(&self) -> PdfBounds {
+        let mut ll = PdfPoint::default();
+        let mut ur = PdfPoint::default();
+
+        for point in self.points.iter() {
+            if point.x < ll.x {
+                ll.x = point.x;
+            }
+
+            if point.x > ur.x {
+                ur.x = point.x;
+            }
+
+            if point.y < ll.y {
+                ll.y = point.x;
+            }
+
+            if point.y > ur.y {
+                ur.y = point.y;
+            }
+        }
+
+        PdfBounds::new(ll, ur)
+    }
+
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         // Get optional values, setting defaults when not specified
@@ -60,6 +87,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         }
 
         // Add properties as extra named fields
+        table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("thickness", self.thickness)?;
@@ -75,6 +103,7 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 points: table.clone().sequence_values().collect::<LuaResult<_>>()?,
+                depth: table.raw_get_ext("depth")?,
                 fill_color: table.raw_get_ext("fill_color")?,
                 outline_color: table.raw_get_ext("outline_color")?,
                 thickness: table.raw_get_ext("thickness")?,

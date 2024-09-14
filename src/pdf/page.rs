@@ -1,4 +1,4 @@
-use crate::pdf::{PdfContext, PdfLuaTableExt, PdfObject};
+use crate::pdf::{PdfContext, PdfObject};
 use mlua::prelude::*;
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
@@ -49,14 +49,16 @@ impl<'lua> IntoLua<'lua> for PdfPage {
         table.raw_set(
             "push",
             lua.create_function(move |lua, tbl: LuaTable| {
-                // Get an optional z position, defaulting to 0 as position
-                let z = tbl.raw_get_ext::<_, Option<i64>>("z")?.unwrap_or_default();
-
                 // Construct a PDF object based on the other table fields
                 let obj = PdfObject::from_lua(LuaValue::Table(tbl), lua)?;
 
                 // Acquire a lock on our object map and queue the object at z
-                objects.write().unwrap().entry(z).or_default().push(obj);
+                objects
+                    .write()
+                    .unwrap()
+                    .entry(obj.depth())
+                    .or_default()
+                    .push(obj);
 
                 Ok(())
             })?,

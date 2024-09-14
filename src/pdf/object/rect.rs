@@ -9,6 +9,7 @@ use printpdf::{
 #[derive(Clone, Debug)]
 pub struct PdfObjectRect {
     pub bounds: PdfBounds,
+    pub depth: Option<i64>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
 }
@@ -38,6 +39,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         let table = lua.create_table()?;
 
         self.bounds.add_to_table(&table)?;
+        table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
 
@@ -53,6 +55,7 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                 let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
                 Ok(Self {
                     bounds,
+                    depth: table.raw_get_ext("depth")?,
                     fill_color: table.raw_get_ext("fill_color")?,
                     outline_color: table.raw_get_ext("outline_color")?,
                 })
