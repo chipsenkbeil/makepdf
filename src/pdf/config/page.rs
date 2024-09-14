@@ -16,6 +16,8 @@ pub struct PdfConfigPage {
     /// Height of a page in millimeters.
     pub height: Mm,
 
+    /// Default font size used when none specified.
+    pub font_size: f32,
     /// Default fill color used when none specified.
     pub fill_color: PdfColor,
     /// Default outline color used when none specified.
@@ -36,6 +38,7 @@ impl Default for PdfConfigPage {
             width: Px(1404).into_pt(dpi).into(),
             height: Px(1872).into_pt(dpi).into(),
 
+            font_size: 32.0,
             fill_color: PdfColor::black(),
             outline_color: PdfColor::black(),
             outline_thickness: 1.0,
@@ -56,6 +59,7 @@ impl<'lua> IntoLua<'lua> for PdfConfigPage {
         table.raw_set("height", self.height.0)?;
 
         // Defaults for page
+        table.raw_set("font_size", self.font_size)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("outline_thickness", self.outline_thickness)?;
@@ -77,6 +81,7 @@ impl<'lua> FromLua<'lua> for PdfConfigPage {
                 height: Mm(table.raw_get_ext("height")?),
 
                 // Defaults for page
+                font_size: table.raw_get_ext("font_size")?,
                 fill_color: table.raw_get_ext("fill_color")?,
                 outline_color: table.raw_get_ext("outline_color")?,
                 outline_thickness: table.raw_get_ext("outline_thickness")?,
