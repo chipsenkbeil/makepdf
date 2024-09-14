@@ -3,6 +3,12 @@
 
 pdf = {}
 
+---Transforms any Lua value into a human-readable representation.
+---@param value any
+---@param opts? {pretty:boolean} if pretty, will make string pretty
+---@return string
+function pdf.inspect(value, opts) end
+
 ---@class pdf.config
 pdf.config = {}
 

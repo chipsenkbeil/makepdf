@@ -54,6 +54,10 @@ enum Commands {
         script: String,
 
         /// Year to associate when running the PDF generation script.
+        #[arg(long, default_value_t = PdfConfig::default().title)]
+        title: String,
+
+        /// Year to associate when running the PDF generation script.
         #[arg(long, default_value_t = PdfConfigPlanner::default().year)]
         year: i32,
     },
@@ -70,6 +74,7 @@ fn main() -> anyhow::Result<()> {
             open,
             output,
             script,
+            title,
             year,
         } => {
             let (width, height) = PdfConfigPage::parse_size(&dimensions, dpi)?;
@@ -86,6 +91,7 @@ fn main() -> anyhow::Result<()> {
                     year,
                     ..Default::default()
                 },
+                title,
                 script,
             })
             .context("Failed to build PDF")?

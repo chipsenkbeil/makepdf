@@ -3,12 +3,14 @@ mod config;
 mod context;
 mod hooks;
 mod object;
+mod page;
 
 pub use common::*;
 pub use config::*;
 pub use context::*;
 pub use hooks::*;
 pub use object::*;
+pub use page::*;
 
 use mlua::prelude::*;
 
@@ -87,6 +89,10 @@ impl<'lua> IntoLua<'lua> for Pdf {
         // Add in the API instances to the base table
         table.raw_set("object", Pdf::create_object_table(lua)?)?;
         table.raw_set("hooks", self.hooks)?;
+        table.raw_set(
+            "inspect",
+            lua.create_function(|_, value: LuaValue| Ok(format!("{value:#?}")))?,
+        )?;
 
         // TODO: Some notes on what to do next
         //

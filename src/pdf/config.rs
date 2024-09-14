@@ -20,14 +20,21 @@ pub struct PdfConfig {
     pub planner: PdfConfigPlanner,
     /// Path or name of script (e.g. `makepdf:panda`)
     pub script: String,
+    /// Title of the pdf document
+    pub title: String,
 }
 
 impl Default for PdfConfig {
     fn default() -> Self {
+        let page = PdfConfigPage::default();
+        let planner = PdfConfigPlanner::default();
+        let year = planner.year;
+
         Self {
-            page: Default::default(),
-            planner: Default::default(),
+            page,
+            planner,
             script: String::from("makepdf:panda"),
+            title: format!("Planner {year}"),
         }
     }
 }
@@ -37,9 +44,10 @@ impl<'lua> IntoLua<'lua> for PdfConfig {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
 
-        table.raw_set("planner", self.planner)?;
         table.raw_set("page", self.page)?;
+        table.raw_set("planner", self.planner)?;
         table.raw_set("script", self.script)?;
+        table.raw_set("title", self.title)?;
 
         Ok(LuaValue::Table(table))
     }
@@ -50,9 +58,10 @@ impl<'lua> FromLua<'lua> for PdfConfig {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                planner: table.raw_get_ext("planner")?,
                 page: table.raw_get_ext("page")?,
+                planner: table.raw_get_ext("planner")?,
                 script: table.raw_get_ext("script").unwrap_or_default(),
+                title: table.raw_get_ext("title").unwrap_or_default(),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

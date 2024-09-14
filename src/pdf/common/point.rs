@@ -51,10 +51,20 @@ impl<'lua> FromLua<'lua> for PdfPoint {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
-            LuaValue::Table(table) => Ok(Self {
-                x: Mm(table.raw_get_ext(0).or_else(|_| table.raw_get_ext("x"))?),
-                y: Mm(table.raw_get_ext(1).or_else(|_| table.raw_get_ext("y"))?),
-            }),
+            LuaValue::Table(table) => {
+                let coords: Vec<f32> = table.clone().sequence_values().collect::<LuaResult<_>>()?;
+
+                Ok(Self {
+                    x: Mm(coords
+                        .first()
+                        .copied()
+                        .map_or_else(|| table.raw_get_ext("x"), Ok)?),
+                    y: Mm(coords
+                        .get(1)
+                        .copied()
+                        .map_or_else(|| table.raw_get_ext("y"), Ok)?),
+                })
+            }
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
                 to: "pdf.common.point",

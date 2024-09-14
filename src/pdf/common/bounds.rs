@@ -66,20 +66,35 @@ impl<'lua> FromLua<'lua> for PdfBounds {
     /// Converts from either
     ///
     /// - `{llx:number, lly:number, urx:number, ury:number}`
-    /// - `{number, number, number, number}`
+    /// - `{{number, number}, {number, number}}`
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
-            LuaValue::Table(table) => Ok(Self {
-                ll: PdfPoint::new(
-                    Mm(table.raw_get_ext(0).or_else(|_| table.raw_get_ext("llx"))?),
-                    Mm(table.raw_get_ext(1).or_else(|_| table.raw_get_ext("lly"))?),
-                ),
-                ur: PdfPoint::new(
-                    Mm(table.raw_get_ext(2).or_else(|_| table.raw_get_ext("urx"))?),
-                    Mm(table.raw_get_ext(3).or_else(|_| table.raw_get_ext("ury"))?),
-                ),
-            }),
+            LuaValue::Table(table) => {
+                let points: Vec<PdfPoint> =
+                    table.clone().sequence_values().collect::<LuaResult<_>>()?;
+
+                Ok(Self {
+                    ll: points.first().copied().map_or_else(
+                        || {
+                            Result::<_, LuaError>::Ok(PdfPoint::new(
+                                Mm(table.raw_get_ext("llx")?),
+                                Mm(table.raw_get_ext("lly")?),
+                            ))
+                        },
+                        Ok,
+                    )?,
+                    ur: points.get(1).copied().map_or_else(
+                        || {
+                            Result::<_, LuaError>::Ok(PdfPoint::new(
+                                Mm(table.raw_get_ext("urx")?),
+                                Mm(table.raw_get_ext("ury")?),
+                            ))
+                        },
+                        Ok,
+                    )?,
+                })
+            }
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
                 to: "pdf.common.bounds",

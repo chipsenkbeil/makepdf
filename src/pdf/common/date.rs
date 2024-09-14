@@ -28,6 +28,18 @@ impl fmt::Display for PdfDate {
     }
 }
 
+impl From<NaiveDate> for PdfDate {
+    fn from(date: NaiveDate) -> Self {
+        Self(date)
+    }
+}
+
+impl From<PdfDate> for NaiveDate {
+    fn from(date: PdfDate) -> Self {
+        date.0
+    }
+}
+
 impl FromStr for PdfDate {
     type Err = chrono::format::ParseError;
 
