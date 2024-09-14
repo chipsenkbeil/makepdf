@@ -30,7 +30,7 @@ impl PdfPage {
     }
 
     /// Draws the page by adding objects in order based on their z-index.
-    pub fn draw(&self, ctx: &PdfContext<'_>) {
+    pub fn draw(&self, ctx: PdfContext<'_>) {
         // Iterate over the objects sorted by z-order
         for (_, objs) in self.objects.read().unwrap().iter() {
             for obj in objs {

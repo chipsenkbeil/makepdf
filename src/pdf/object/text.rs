@@ -15,7 +15,7 @@ pub struct PdfObjectText {
 
 impl PdfObjectText {
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfContext<'_>) {
+    pub fn draw(&self, ctx: PdfContext<'_>) {
         // Get optional values, setting defaults when not specified
         let size = self.size.unwrap_or(ctx.config.page.font_size);
         let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);

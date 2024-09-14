@@ -112,7 +112,7 @@ impl Engine {
                     .context("Failed invoking hook: on_monthly_page")?;
             }
 
-            page.draw(&ctx);
+            page.draw(ctx);
         }
 
         // Run the hooks for the weekly page
@@ -130,7 +130,7 @@ impl Engine {
                     .context("Failed invoking hook: on_weekly_page")?;
             }
 
-            page.draw(&ctx);
+            page.draw(ctx);
         }
 
         // Run the hooks for the daily page
@@ -148,7 +148,7 @@ impl Engine {
                     .context("Failed invoking hook: on_daily_page")?;
             }
 
-            page.draw(&ctx);
+            page.draw(ctx);
         }
 
         Ok(Self {

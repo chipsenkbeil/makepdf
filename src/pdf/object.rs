@@ -31,7 +31,7 @@ impl PdfObject {
     }
 
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: &PdfContext<'_>) {
+    pub fn draw(&self, ctx: PdfContext<'_>) {
         match self {
             Self::Line(x) => x.draw(ctx),
             Self::Rect(x) => x.draw(ctx),
