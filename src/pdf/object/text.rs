@@ -22,6 +22,11 @@ pub struct PdfObjectText {
 impl PdfObjectText {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: &PdfContext<'_>) {
+        // Get optional values, setting defaults when not specified
+        let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
+        let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
+
+        // Set the color and positioning of our rect
         let (llx, lly, urx, ury) = self.bounds.to_coords();
 
         // If given text, we'll populate within the middle of the bounds
