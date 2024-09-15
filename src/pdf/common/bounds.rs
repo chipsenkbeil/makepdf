@@ -91,7 +91,7 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
 impl<'lua> FromLua<'lua> for PdfBounds {
     /// Converts from any of
     ///
-    /// - `{ll:{x:number, y:number}, ur{x:number, y:number}}`
+    /// - `{ll:{x:number, y:number}, ur:{x:number, y:number}}`
     /// - `{llx:number, lly:number, urx:number, ury:number}`
     /// - `{{number, number}, {number, number}}`
     /// - `{number, number, number, number}`

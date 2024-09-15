@@ -23,8 +23,14 @@ pub struct PdfHooks {
 impl<'lua> IntoLua<'lua> for PdfHooks {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
+        let table = lua.create_table()?;
+
         // NOTE: We don't place any hooks into the Lua engine.
-        Ok(LuaValue::Table(lua.create_table()?))
+        table.raw_set("on_daily_page", Vec::<OnDailyPageFn>::new())?;
+        table.raw_set("on_monthly_page", Vec::<OnMonthlyPageFn>::new())?;
+        table.raw_set("on_weekly_page", Vec::<OnWeeklyPageFn>::new())?;
+
+        Ok(LuaValue::Table(table))
     }
 }
 

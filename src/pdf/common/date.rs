@@ -138,6 +138,13 @@ impl<'lua> IntoLua<'lua> for PdfDate {
         table.raw_set("ordinal", self.0.ordinal())?;
 
         table.raw_set(
+            "format",
+            lua.create_function(move |_, format: String| {
+                Ok(self.0.format(format.as_str()).to_string())
+            })?,
+        )?;
+
+        table.raw_set(
             "add_days",
             lua.create_function(move |_, days: i64| {
                 self.add_days(days)
