@@ -69,6 +69,36 @@ impl PdfObject {
     }
 }
 
+impl From<PdfObjectGroup> for PdfObject {
+    fn from(obj: PdfObjectGroup) -> Self {
+        Self::Group(obj)
+    }
+}
+
+impl From<PdfObjectLine> for PdfObject {
+    fn from(obj: PdfObjectLine) -> Self {
+        Self::Line(obj)
+    }
+}
+
+impl From<PdfObjectRect> for PdfObject {
+    fn from(obj: PdfObjectRect) -> Self {
+        Self::Rect(obj)
+    }
+}
+
+impl From<PdfObjectShape> for PdfObject {
+    fn from(obj: PdfObjectShape) -> Self {
+        Self::Shape(obj)
+    }
+}
+
+impl From<PdfObjectText> for PdfObject {
+    fn from(obj: PdfObjectText) -> Self {
+        Self::Text(obj)
+    }
+}
+
 impl<'lua> IntoLua<'lua> for PdfObject {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {

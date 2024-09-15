@@ -3,7 +3,6 @@ mod config;
 mod context;
 mod hooks;
 mod object;
-mod page;
 mod utils;
 
 pub use common::*;
@@ -11,7 +10,6 @@ pub use config::*;
 pub use context::*;
 pub use hooks::*;
 pub use object::*;
-pub use page::*;
 pub use utils::*;
 
 use mlua::prelude::*;
@@ -95,14 +93,9 @@ impl<'lua> IntoLua<'lua> for Pdf {
 
         // TODO: Some notes on what to do next
         //
-        // 6. Think through how to make some object that can contain others (container?) and
-        //    have PdfContext contain bounds representing the container, and a function that can
-        //    translate the bounds or points of an object relative to the container
         // 7. Think through how linking works. do we just have link annotations maintained as a
         //    list within the pdf? how do we make it work linking an object (with its dimensions)
         //    to another is easy?
-        // 8. How do we handle z ordering to make it easier to ensure drawing order is correct?
-        //    At the moment, things would be drawn by when they're added to a page.
         // 9. Outline out what we need for the page object provided to the hooks
 
         Ok(LuaValue::Table(table))

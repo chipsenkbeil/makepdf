@@ -45,10 +45,60 @@ impl PdfObjectGroup {
             .unwrap_or_default()
     }
 
+    /// Pushes a [`PdfObject`] into the end of the group.
+    pub fn push(&mut self, obj: impl Into<PdfObject>) {
+        self.objects.push(obj.into());
+    }
+
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         for obj in self.objects.iter() {
             obj.draw(ctx);
+        }
+    }
+
+    /// Returns an iterator over the objects grouped together.
+    pub fn iter(&self) -> impl Iterator<Item = &PdfObject> {
+        self.objects.iter()
+    }
+
+    /// Returns a mutable iterator over the objects grouped together.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PdfObject> {
+        self.objects.iter_mut()
+    }
+}
+
+impl<'a> IntoIterator for &'a PdfObjectGroup {
+    type Item = &'a PdfObject;
+    type IntoIter = std::slice::Iter<'a, PdfObject>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.objects.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut PdfObjectGroup {
+    type Item = &'a mut PdfObject;
+    type IntoIter = std::slice::IterMut<'a, PdfObject>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.objects.iter_mut()
+    }
+}
+
+impl IntoIterator for PdfObjectGroup {
+    type Item = PdfObject;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.objects.into_iter()
+    }
+}
+
+impl FromIterator<PdfObject> for PdfObjectGroup {
+    fn from_iter<I: IntoIterator<Item = PdfObject>>(iter: I) -> Self {
+        Self {
+            objects: iter.into_iter().collect(),
         }
     }
 }
