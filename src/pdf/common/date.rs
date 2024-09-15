@@ -1,4 +1,4 @@
-use crate::pdf::PdfLuaTableExt;
+use crate::pdf::{PdfLuaExt, PdfLuaTableExt};
 use chrono::prelude::*;
 use chrono::{Days, Months};
 use mlua::prelude::*;
@@ -128,7 +128,7 @@ impl FromStr for PdfDate {
 impl<'lua> IntoLua<'lua> for PdfDate {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         table.raw_set("year", self.0.year())?;
         table.raw_set("month", self.0.month())?;
@@ -137,14 +137,14 @@ impl<'lua> IntoLua<'lua> for PdfDate {
         table.raw_set("week", self.0.iso_week().week())?;
         table.raw_set("ordinal", self.0.ordinal())?;
 
-        table.raw_set(
+        metatable.raw_set(
             "format",
             lua.create_function(move |_, format: String| {
                 Ok(self.0.format(format.as_str()).to_string())
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "add_days",
             lua.create_function(move |_, days: i64| {
                 self.add_days(days)
@@ -152,7 +152,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "tomorrow",
             lua.create_function(move |_, ()| {
                 self.tomorrow()
@@ -160,7 +160,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "yesterday",
             lua.create_function(move |_, ()| {
                 self.yesterday()
@@ -168,7 +168,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "add_weeks",
             lua.create_function(move |_, weeks: i64| {
                 self.add_weeks(weeks)
@@ -176,7 +176,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "next_week",
             lua.create_function(move |_, ()| {
                 self.next_week()
@@ -184,7 +184,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "last_week",
             lua.create_function(move |_, ()| {
                 self.last_week()
@@ -192,7 +192,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "add_months",
             lua.create_function(move |_, months: i32| {
                 self.add_months(months)
@@ -200,7 +200,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "next_month",
             lua.create_function(move |_, ()| {
                 self.next_month()
@@ -208,7 +208,7 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "last_month",
             lua.create_function(move |_, ()| {
                 self.last_month()
@@ -216,7 +216,6 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             })?,
         )?;
 
-        let metatable = lua.create_table()?;
         metatable.raw_set(
             "__eq",
             lua.create_function(|_, (a, b): (PdfDate, PdfDate)| Ok(a.0 == b.0))?,
@@ -229,14 +228,16 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             "__le",
             lua.create_function(|_, (a, b): (PdfDate, PdfDate)| Ok(a.0 <= b.0))?,
         )?;
+
+        // Return copy of the date as a string. As the table is immutable, this shouldn't have any
+        // issue staying current with the date instance.
         metatable.raw_set(
             "__tostring",
-            lua.create_function(|_, date: PdfDate| Ok(date.to_string()))?,
+            lua.create_function(move |_, ()| Ok(self.to_string()))?,
         )?;
-        table.set_metatable(Some(metatable));
 
         // Mark table as read-only to prevent tampering without using specialized methods
-        table.set_readonly(true);
+        lua.mark_readonly(table.clone())?;
 
         Ok(LuaValue::Table(table))
     }

@@ -10,7 +10,7 @@ mod space;
 pub use bounds::PdfBounds;
 pub use color::PdfColor;
 pub use date::PdfDate;
-pub use ext::PdfLuaTableExt;
+pub use ext::{PdfLuaExt, PdfLuaTableExt};
 pub use mode::PdfPaintMode;
 pub use order::PdfWindingOrder;
 pub use point::PdfPoint;

@@ -1,5 +1,5 @@
 use super::{EnginePageKind, WeakEnginePagesMap};
-use crate::pdf::{PdfContext, PdfDate, PdfObject};
+use crate::pdf::{PdfContext, PdfDate, PdfLuaExt, PdfObject};
 use chrono::Datelike;
 use mlua::prelude::*;
 use printpdf::{PdfLayerIndex, PdfPageIndex};
@@ -219,7 +219,7 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         )?;
 
         // Prevent altering the page object
-        table.set_readonly(true);
+        lua.mark_readonly(table.clone())?;
 
         Ok(LuaValue::Table(table))
     }

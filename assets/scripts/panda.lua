@@ -10,6 +10,8 @@ local u = pdf.utils
 
 h.on_monthly_page = function(page --[[@param page pdf.engine.Page]])
     print("Processing monthly page", page.date.format("%B"))
+    print("DATE", page.date)
+    print("DATE INSPECTED", u.inspect(page.date))
 
     page.push(o.rect({
         { 0,  0 },
