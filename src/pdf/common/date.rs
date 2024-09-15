@@ -256,7 +256,7 @@ impl<'lua> FromLua<'lua> for PdfDate {
             LuaValue::Table(table) => match table.get_metatable() {
                 Some(metatable) => {
                     let f = metatable.raw_get_ext::<_, LuaFunction>("__tostring")?;
-                    f.call(())
+                    f.call(table)
                 }
                 None => Err(LuaError::FromLuaConversionError {
                     from,
