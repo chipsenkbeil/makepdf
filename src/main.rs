@@ -77,9 +77,11 @@ fn main() -> anyhow::Result<()> {
             title,
             year,
         } => {
+            // Translate our dimensions into a width and height we will use for the PDF pages
             let (width, height) = PdfConfigPage::parse_size(&dimensions, dpi)?;
 
-            Engine::build(PdfConfig {
+            // Build our initial configuration based on the commandline arguments and defaults
+            let config = PdfConfig {
                 page: PdfConfigPage {
                     dpi,
                     font,
@@ -93,10 +95,24 @@ fn main() -> anyhow::Result<()> {
                 },
                 title,
                 script,
-            })
-            .context("Failed to build PDF")?
-            .save(&output)
-            .context("Failed to save PDF to file")?;
+            };
+
+            // Do the actual process of
+            //
+            // 1. Creating an engine for the given configuration
+            // 2. Setup the configuration by running a Lua script to modify it
+            // 3. Run post-script hooks that will create internal pages & objects
+            // 4. Translate the internal pages & objects into the actual PDF
+            // 5. Save the PDF to disk
+            Engine::new(config)
+                .setup()
+                .context("Failed to setup PDF engine")?
+                .run_hooks()
+                .context("Failed to run PDF hooks")?
+                .build()
+                .context("Failed to build PDF")?
+                .save(&output)
+                .context("Failed to save PDF to file")?;
 
             // If indicated, we try to open the PDF automatically
             if open {

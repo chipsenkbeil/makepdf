@@ -12,6 +12,21 @@ use std::str::FromStr;
 pub struct PdfDate(NaiveDate);
 
 impl PdfDate {
+    /// Creates a new date for beginning of `year`. Returns None if invalid.
+    pub fn beginning_of_year(year: i32) -> Option<Self> {
+        NaiveDate::from_ymd_opt(year, 1, 1).map(PdfDate)
+    }
+
+    /// Creates a new date for end of `year`. Returns None if invalid.
+    pub fn end_of_year(year: i32) -> Option<Self> {
+        NaiveDate::from_ymd_opt(year, 12, 31).map(PdfDate)
+    }
+
+    /// Creates a new date for `year` and `month`. Returns None if invalid.
+    pub fn beginning_of_month(year: i32, month: u32) -> Option<Self> {
+        NaiveDate::from_ymd_opt(year, month, 1).map(PdfDate)
+    }
+
     /// Adds days to the date, returning the new date or none if the date would be out of range.
     ///
     /// The days to add can be negative, which will result in going backwards.

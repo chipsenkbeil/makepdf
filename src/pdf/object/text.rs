@@ -39,19 +39,20 @@ impl PdfObjectText {
         // Set color and render text
         ctx.layer.set_fill_color(fill_color.into());
         ctx.layer.set_outline_color(outline_color.into());
-        ctx.layer.use_text(&self.text, size, x, y, ctx.font);
+        ctx.layer
+            .use_text(&self.text, size, x, y, ctx.as_font_ref());
     }
 
     /// Returns the width of the text in millimeters for the given font face.
     pub fn text_width(&self, ctx: PdfContext<'_>) -> Mm {
         let size = self.size.unwrap_or(ctx.config.page.font_size);
-        let units_per_em = ctx.face.units_per_em() as f64;
+        let units_per_em = ctx.as_face().units_per_em() as f64;
         let scale = size as f64 / units_per_em;
         Pt(self
             .text
             .chars()
             .map(|ch| {
-                glyph_metrics(ctx.face, ch as u16)
+                glyph_metrics(ctx.as_face(), ch as u16)
                     .map(|glyph| glyph.width as f64 * scale)
                     .unwrap_or(0.0)
             })
@@ -62,10 +63,10 @@ impl PdfObjectText {
     /// Returns the height of the text in millimeters for the given font face.
     pub fn text_height(&self, ctx: PdfContext<'_>) -> Mm {
         let size = self.size.unwrap_or(ctx.config.page.font_size);
-        let units_per_em = ctx.face.units_per_em() as f64;
-        let ascender = ctx.face.ascender() as f64;
-        let descender = ctx.face.descender() as f64;
-        let line_gap = ctx.face.line_gap() as f64;
+        let units_per_em = ctx.as_face().units_per_em() as f64;
+        let ascender = ctx.as_face().ascender() as f64;
+        let descender = ctx.as_face().descender() as f64;
+        let line_gap = ctx.as_face().line_gap() as f64;
 
         // Calculate the total height of the text
         let text_height = (ascender - descender + line_gap) * (size as f64 / units_per_em);
