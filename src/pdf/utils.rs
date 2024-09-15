@@ -1,3 +1,4 @@
+use crate::pdf::PdfLuaExt;
 use mlua::prelude::*;
 use tailcall::tailcall;
 
@@ -129,9 +130,9 @@ impl PdfUtils {
 impl<'lua> IntoLua<'lua> for PdfUtils {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
-        table.raw_set(
+        metatable.raw_set(
             "assert_deep_equal",
             lua.create_function(|_, (a, b, opts): (LuaValue, LuaValue, Option<LuaTable>)| {
                 let ignore_metatable = opts
@@ -141,7 +142,7 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "assert_not_deep_equal",
             lua.create_function(|_, (a, b, opts): (LuaValue, LuaValue, Option<LuaTable>)| {
                 let ignore_metatable = opts
@@ -151,7 +152,7 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "deep_equal",
             lua.create_function(|_, (a, b, opts): (LuaValue, LuaValue, Option<LuaTable>)| {
                 let ignore_metatable = opts
@@ -161,19 +162,19 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "inspect",
             lua.create_function(|_, value: LuaValue| Ok(PdfUtils::inspect(value)))?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "starts_with",
             lua.create_function(|_, (value, prefix): (LuaValue, LuaValue)| {
                 Ok(PdfUtils::starts_with(value, prefix))
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "ends_with",
             lua.create_function(|_, (value, prefix): (LuaValue, LuaValue)| {
                 Ok(PdfUtils::ends_with(value, prefix))
