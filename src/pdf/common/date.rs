@@ -11,6 +11,79 @@ use std::str::FromStr;
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct PdfDate(NaiveDate);
 
+impl PdfDate {
+    /// Adds days to the date, returning the new date or none if the date would be out of range.
+    ///
+    /// The days to add can be negative, which will result in going backwards.
+    pub fn add_days(self, days: i64) -> Option<Self> {
+        match days.cmp(&0) {
+            Ordering::Greater => self.0.checked_add_days(Days::new(days as u64)).map(Self),
+            Ordering::Less => self.0.checked_sub_days(Days::new(-days as u64)).map(Self),
+            Ordering::Equal => Some(self),
+        }
+    }
+
+    /// Adds weeks to the date, returning the new date or none if the date would be out of range.
+    ///
+    /// The weeks to add can be negative, which will result in going backwards.
+    pub fn add_weeks(self, weeks: i64) -> Option<Self> {
+        self.add_days(weeks * 7)
+    }
+
+    /// Adds months to the date, returning the new date or none if the date would be out of range.
+    ///
+    /// The months to add can be negative, which will result in going backwards.
+    pub fn add_months(self, months: i32) -> Option<Self> {
+        match months.cmp(&0) {
+            Ordering::Greater => self
+                .0
+                .checked_add_months(Months::new(months as u32))
+                .map(Self),
+            Ordering::Less => self
+                .0
+                .checked_sub_months(Months::new(-months as u32))
+                .map(Self),
+            Ordering::Equal => Some(self),
+        }
+    }
+
+    /// Returns tomorrow's date, or none if the date would be out of range.
+    #[inline]
+    pub fn tomorrow(self) -> Option<Self> {
+        self.add_days(1)
+    }
+
+    /// Returns yesterday's date, or none if the date would be out of range.
+    #[inline]
+    pub fn yesterday(self) -> Option<Self> {
+        self.add_days(-1)
+    }
+
+    /// Returns next week's date, or none if the date would be out of range.
+    #[inline]
+    pub fn next_week(self) -> Option<Self> {
+        self.add_weeks(1)
+    }
+
+    /// Returns last week's date, or none if the date would be out of range.
+    #[inline]
+    pub fn last_week(self) -> Option<Self> {
+        self.add_weeks(-1)
+    }
+
+    /// Returns next month's date, or none if the date would be out of range.
+    #[inline]
+    pub fn next_month(self) -> Option<Self> {
+        self.add_months(1)
+    }
+
+    /// Returns last month's date, or none if the date would be out of range.
+    #[inline]
+    pub fn last_month(self) -> Option<Self> {
+        self.add_months(-1)
+    }
+}
+
 impl Deref for PdfDate {
     type Target = NaiveDate;
 
@@ -66,35 +139,73 @@ impl<'lua> IntoLua<'lua> for PdfDate {
 
         table.raw_set(
             "add_days",
-            lua.create_function(move |_, days: i64| match days.cmp(&0) {
-                Ordering::Greater => self
-                    .0
-                    .checked_add_days(Days::new(days as u64))
-                    .map(Self)
-                    .ok_or_else(|| LuaError::runtime("resulting date out of range")),
-                Ordering::Less => self
-                    .0
-                    .checked_sub_days(Days::new(-days as u64))
-                    .map(Self)
-                    .ok_or_else(|| LuaError::runtime("resulting date out of range")),
-                Ordering::Equal => Ok(self),
+            lua.create_function(move |_, days: i64| {
+                self.add_days(days)
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "tomorrow",
+            lua.create_function(move |_, ()| {
+                self.tomorrow()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "yesterday",
+            lua.create_function(move |_, ()| {
+                self.yesterday()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "add_weeks",
+            lua.create_function(move |_, weeks: i64| {
+                self.add_weeks(weeks)
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "next_week",
+            lua.create_function(move |_, ()| {
+                self.next_week()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "last_week",
+            lua.create_function(move |_, ()| {
+                self.last_week()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         table.raw_set(
             "add_months",
-            lua.create_function(move |_, months: i32| match months.cmp(&0) {
-                Ordering::Greater => self
-                    .0
-                    .checked_add_months(Months::new(months as u32))
-                    .map(Self)
-                    .ok_or_else(|| LuaError::runtime("resulting date out of range")),
-                Ordering::Less => self
-                    .0
-                    .checked_sub_months(Months::new(-months as u32))
-                    .map(Self)
-                    .ok_or_else(|| LuaError::runtime("resulting date out of range")),
-                Ordering::Equal => Ok(self),
+            lua.create_function(move |_, months: i32| {
+                self.add_months(months)
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "next_month",
+            lua.create_function(move |_, ()| {
+                self.next_month()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
+            })?,
+        )?;
+
+        table.raw_set(
+            "last_month",
+            lua.create_function(move |_, ()| {
+                self.last_month()
+                    .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 

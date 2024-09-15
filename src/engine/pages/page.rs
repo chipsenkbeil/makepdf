@@ -50,6 +50,37 @@ impl EnginePage {
         )
     }
 
+    /// Retrieves the next page in sequence based on the current page's kind (daily, weekly,
+    /// or monthly).
+    pub fn next_page(&self) -> Option<EnginePage> {
+        let date = match self.kind {
+            EnginePageKind::Daily => self.date.tomorrow(),
+            EnginePageKind::Monthly => self.date.next_month(),
+            EnginePageKind::Weekly => self.date.next_week(),
+        };
+
+        date.and_then(|date| self.page_at(self.kind, date))
+    }
+
+    /// Retrieves the previous page in sequence based on the current page's kind (daily, weekly,
+    /// or monthly).
+    pub fn prev_page(&self) -> Option<EnginePage> {
+        let date = match self.kind {
+            EnginePageKind::Daily => self.date.yesterday(),
+            EnginePageKind::Monthly => self.date.last_month(),
+            EnginePageKind::Weekly => self.date.last_week(),
+        };
+
+        date.and_then(|date| self.page_at(self.kind, date))
+    }
+
+    /// Retrieves the page of `kind` at `date`.
+    pub fn page_at(&self, kind: EnginePageKind, date: PdfDate) -> Option<EnginePage> {
+        self.pages
+            .upgrade()
+            .and_then(|pages| pages.get_page(kind, date))
+    }
+
     /// Draws the page by adding objects in order based on their depth.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         for (_, objs) in self.objects.read().unwrap().iter() {
@@ -63,6 +94,7 @@ impl EnginePage {
 impl<'lua> IntoLua<'lua> for EnginePage {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
+        let kind = self.kind;
         let objects = Arc::downgrade(&self.objects);
 
         let table = lua.create_table()?;
@@ -114,6 +146,52 @@ impl<'lua> IntoLua<'lua> for EnginePage {
                 Ok(match pages.upgrade() {
                     Some(pages) => {
                         pages.get_page(EnginePageKind::Daily, maybe_date.unwrap_or(date))
+                    }
+                    None => None,
+                })
+            })?,
+        )?;
+
+        // Define a field function to get the next page for the current page based on its type and
+        // date. This will retrieve the page from the weak reference, upgrading it in the process,
+        // and can potentially return nil if no reference is found.
+        let date = self.date;
+        let pages = self.pages.clone();
+        table.raw_set(
+            "next_page",
+            lua.create_function(move |_, ()| {
+                Ok(match pages.upgrade() {
+                    Some(pages) => {
+                        let date = match kind {
+                            EnginePageKind::Daily => date.tomorrow(),
+                            EnginePageKind::Monthly => date.next_month(),
+                            EnginePageKind::Weekly => date.next_week(),
+                        };
+
+                        date.and_then(|date| pages.get_page(kind, date))
+                    }
+                    None => None,
+                })
+            })?,
+        )?;
+
+        // Define a field function to get the previous page for the current page based on its type
+        // and date. This will retrieve the page from the weak reference, upgrading it in the
+        // process, and can potentially return nil if no reference is found.
+        let date = self.date;
+        let pages = self.pages.clone();
+        table.raw_set(
+            "prev_page",
+            lua.create_function(move |_, ()| {
+                Ok(match pages.upgrade() {
+                    Some(pages) => {
+                        let date = match kind {
+                            EnginePageKind::Daily => date.yesterday(),
+                            EnginePageKind::Monthly => date.last_month(),
+                            EnginePageKind::Weekly => date.last_week(),
+                        };
+
+                        date.and_then(|date| pages.get_page(kind, date))
                     }
                     None => None,
                 })

@@ -6,9 +6,8 @@
 
 print("hello world")
 
-pdf.hooks.on_monthly_page = function(page, date)
-    print("PDF", pdf.inspect(pdf))
-    print("PAGE", pdf.inspect(page))
-    print("DATE", pdf.inspect(date))
+pdf.hooks.on_monthly_page = function(page)
+    print("PDF", pdf.utils.inspect(pdf))
+    print("PAGE", pdf.utils.inspect(page))
     page.push(pdf.object.rect({ { 0, 0 }, { 50, 50 } }))
 end

@@ -38,6 +38,15 @@ impl Pdf {
         let table = lua.create_table()?;
 
         table.raw_set(
+            "group",
+            lua.create_function(|lua, tbl: LuaTable| {
+                PdfObjectGroup::from_lua(LuaValue::Table(tbl), lua)
+                    .map(PdfObject::Group)?
+                    .into_lua(lua)
+            })?,
+        )?;
+
+        table.raw_set(
             "line",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectLine::from_lua(LuaValue::Table(tbl), lua)
