@@ -4,11 +4,11 @@
 -- Recreation of the planner that has a panda.
 -------------------------------------------------------------------------------
 
-local h = pdf.hooks
 local o = pdf.object
 local u = pdf.utils
 
-h.on_monthly_page = function(page --[[@param page pdf.engine.Page]])
+print("hello world")
+pdf.hooks.on_monthly_page(function(page)
     print("Processing monthly page", page.date.format("%B"))
     print("DATE", page.date)
     print("DATE INSPECTED", u.inspect(page.date))
@@ -28,4 +28,4 @@ h.on_monthly_page = function(page --[[@param page pdf.engine.Page]])
     if p then
         print("--> Next page is month", p.date.format("%B"))
     end
-end
+end)

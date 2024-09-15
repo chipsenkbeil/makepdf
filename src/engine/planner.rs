@@ -1,5 +1,5 @@
-use super::{EnginePageKind, EnginePages, Font};
-use crate::pdf::{PdfConfig, PdfContext, PdfHooks};
+use super::{EngineHooks, EnginePageKind, EnginePages, Font};
+use crate::pdf::{PdfConfig, PdfContext};
 use anyhow::Context;
 use chrono::{Datelike, NaiveDate};
 use owned_ttf_parser::{AsFaceRef, OwnedFace};
@@ -70,28 +70,19 @@ impl EnginePlanner {
         })
     }
 
-    pub fn run_hooks(&self, hooks: PdfHooks) -> anyhow::Result<()> {
+    pub fn run_hooks(&self, hooks: EngineHooks) -> anyhow::Result<()> {
         // Run the hooks for the monthly, weekly, daily pages
         self.pages.for_each_page(|page| {
             if let Some(layer) = self.pages.get_page_layer_by_key(page.key()) {
                 match page.kind {
                     EnginePageKind::Daily => {
-                        for f in hooks.on_daily_page.iter() {
-                            f.call(page.clone())
-                                .context("Failed invoking hook: on_daily_page")?;
-                        }
+                        hooks.on_daily_page(page.clone())?;
                     }
                     EnginePageKind::Monthly => {
-                        for f in hooks.on_monthly_page.iter() {
-                            f.call(page.clone())
-                                .context("Failed invoking hook: on_monthly_page")?;
-                        }
+                        hooks.on_monthly_page(page.clone())?;
                     }
                     EnginePageKind::Weekly => {
-                        for f in hooks.on_weekly_page.iter() {
-                            f.call(page.clone())
-                                .context("Failed invoking hook: on_weekly_page")?;
-                        }
+                        hooks.on_weekly_page(page.clone())?;
                     }
                 }
 

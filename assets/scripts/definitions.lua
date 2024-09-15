@@ -172,19 +172,29 @@ function Page.push(obj) end
 -- HOOKS FUNCTIONS
 -------------------------------------------------------------------------------
 
----@alias pdf.hooks.OnPageFn fun(pdf.engine.Page)
-
 ---@class pdf.hooks
 pdf.hooks = {}
 
----@type pdf.hooks.OnPageFn|pdf.hooks.OnPageFn[]
-pdf.hooks.on_daily_page = {}
+---Register new callback for when a daily page is created.
+---
+---This will append an additional callback on the stack, and
+---can be used multiple times to register multiple callbacks.
+---@param f fun(page:pdf.engine.Page)
+function pdf.hooks.on_daily_page(f) end
 
----@type pdf.hooks.OnPageFn|pdf.hooks.OnPageFn[]
-pdf.hooks.on_monthly_page = {}
+---Register new callback for when a monthly page is created.
+---
+---This will append an additional callback on the stack, and
+---can be used multiple times to register multiple callbacks.
+---@param f fun(page:pdf.engine.Page)
+function pdf.hooks.on_monthly_page(f) end
 
----@type pdf.hooks.OnPageFn|pdf.hooks.OnPageFn[]
-pdf.hooks.on_weekly_page = {}
+---Register new callback for when a weekly page is created.
+---
+---This will append an additional callback on the stack, and
+---can be used multiple times to register multiple callbacks.
+---@param f fun(page:pdf.engine.Page)
+function pdf.hooks.on_weekly_page(f) end
 
 -------------------------------------------------------------------------------
 -- OBJECT FUNCTIONS

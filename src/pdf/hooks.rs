@@ -1,67 +1,55 @@
-mod daily;
-mod monthly;
-mod weekly;
-
-pub use daily::OnDailyPageFn;
-pub use monthly::OnMonthlyPageFn;
-pub use weekly::OnWeeklyPageFn;
-
-use crate::pdf::PdfLuaTableExt;
+use crate::engine::EngineHooks;
+use crate::pdf::PdfLuaExt;
 use mlua::prelude::*;
 
-/// Collection of hooks that contain callbacks to invoke in different situations.
-#[derive(Clone, Debug, Default)]
-pub struct PdfHooks {
-    /// Invoked when a monthly page is created.
-    pub on_monthly_page: Vec<OnMonthlyPageFn>,
-    /// Invoked when a weekly page is created.
-    pub on_weekly_page: Vec<OnWeeklyPageFn>,
-    /// Invoked when a daily page is created.
-    pub on_daily_page: Vec<OnDailyPageFn>,
-}
+/// Lua-only struct providing an interface for specialized hook registration.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct PdfHooks;
 
 impl<'lua> IntoLua<'lua> for PdfHooks {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
-        // NOTE: We don't place any hooks into the Lua engine.
-        table.raw_set("on_daily_page", Vec::<OnDailyPageFn>::new())?;
-        table.raw_set("on_monthly_page", Vec::<OnMonthlyPageFn>::new())?;
-        table.raw_set("on_weekly_page", Vec::<OnWeeklyPageFn>::new())?;
+        metatable.raw_set(
+            "on_daily_page",
+            lua.create_function(|lua, f: LuaOwnedFunction| {
+                match lua.app_data_mut::<EngineHooks>() {
+                    Some(mut hooks) => {
+                        hooks.register_on_daily_page(f);
+                        Ok(())
+                    }
+                    None => Err(LuaError::runtime("failed to register daily page hook")),
+                }
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "on_monthly_page",
+            lua.create_function(|lua, f: LuaOwnedFunction| {
+                match lua.app_data_mut::<EngineHooks>() {
+                    Some(mut hooks) => {
+                        hooks.register_on_monthly_page(f);
+                        Ok(())
+                    }
+                    None => Err(LuaError::runtime("failed to register monthly page hook")),
+                }
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "on_weekly_page",
+            lua.create_function(|lua, f: LuaOwnedFunction| {
+                match lua.app_data_mut::<EngineHooks>() {
+                    Some(mut hooks) => {
+                        hooks.register_on_weekly_page(f);
+                        Ok(())
+                    }
+                    None => Err(LuaError::runtime("failed to register weekly page hook")),
+                }
+            })?,
+        )?;
 
         Ok(LuaValue::Table(table))
-    }
-}
-
-impl<'lua> FromLua<'lua> for PdfHooks {
-    #[inline]
-    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
-        let get_hook_fns = |table: &LuaTable<'_>, key: &str| {
-            table
-                .raw_get_ext::<_, Vec<LuaOwnedFunction>>(key)
-                .unwrap_or_else(|_| {
-                    table
-                        .raw_get_ext::<_, LuaOwnedFunction>(key)
-                        .ok()
-                        .into_iter()
-                        .collect()
-                })
-        };
-
-        match value {
-            // For hooks, we accept either a single function or a list of functions, and therefore
-            // attempt to cast to either a OwnedTable or a Vec<OwnedTable>.
-            LuaValue::Table(table) => Ok(Self {
-                on_monthly_page: get_hook_fns(&table, "on_monthly_page"),
-                on_weekly_page: get_hook_fns(&table, "on_weekly_page"),
-                on_daily_page: get_hook_fns(&table, "on_daily_page"),
-            }),
-            _ => Err(LuaError::FromLuaConversionError {
-                from: value.type_name(),
-                to: "pdf.hooks",
-                message: None,
-            }),
-        }
     }
 }

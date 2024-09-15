@@ -1,11 +1,12 @@
 use crate::constants::SCRIPTS;
 use anyhow::Context;
 use mlua::{FromLua, IntoLua, Lua};
+use std::ops::{Deref, DerefMut};
 
 /// Represents a script that can be executed to generate a PDF.
 pub struct Script {
     /// Lua engine that is used to execute the code
-    pub lua: Lua,
+    lua: Lua,
 
     /// Code loaded as raw bytes
     bytes: Vec<u8>,
@@ -75,5 +76,19 @@ impl Script {
             .globals()
             .raw_get(name.as_ref())
             .with_context(|| format!("Failed to retrieve '{}'", name.as_ref()))
+    }
+}
+
+impl Deref for Script {
+    type Target = Lua;
+
+    fn deref(&self) -> &Self::Target {
+        &self.lua
+    }
+}
+
+impl DerefMut for Script {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.lua
     }
 }

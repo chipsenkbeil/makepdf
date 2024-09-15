@@ -19,18 +19,12 @@ use mlua::prelude::*;
 pub struct Pdf {
     /// Configuration associated with the PDF.
     pub config: PdfConfig,
-
-    /// Hooks associated with the PDF.
-    pub hooks: PdfHooks,
 }
 
 impl Pdf {
     /// Creates a new PDF instance using `config` and a default, empty set of hooks.
     pub fn new(config: PdfConfig) -> Self {
-        Self {
-            config,
-            ..Default::default()
-        }
+        Self { config }
     }
 
     /// Creates a new Lua table that contains methods to create objects and other manipulation.
@@ -96,7 +90,7 @@ impl<'lua> IntoLua<'lua> for Pdf {
         };
 
         // Add in the API instances to the base table
-        table.raw_set("hooks", self.hooks)?;
+        table.raw_set("hooks", PdfHooks)?;
         table.raw_set("object", Pdf::create_object_table(lua)?)?;
         table.raw_set("utils", PdfUtils)?;
 
@@ -117,7 +111,6 @@ impl<'lua> FromLua<'lua> for Pdf {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 config: PdfConfig::from_lua(LuaValue::Table(table.clone()), lua)?,
-                hooks: table.raw_get_ext("hooks")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
