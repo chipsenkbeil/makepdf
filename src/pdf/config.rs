@@ -18,7 +18,7 @@ pub struct PdfConfig {
     pub page: PdfConfigPage,
     /// Configuration tied to a PDF planner
     pub planner: PdfConfigPlanner,
-    /// Path or name of script (e.g. `makepdf:panda`)
+    /// Path or name of script (e.g. `builtin:panda`)
     pub script: String,
     /// Title of the pdf document
     pub title: String,
@@ -33,7 +33,7 @@ impl Default for PdfConfig {
         Self {
             page,
             planner,
-            script: String::from("makepdf:panda"),
+            script: String::from("makepdf.lua"),
             title: format!("Planner {year}"),
         }
     }
