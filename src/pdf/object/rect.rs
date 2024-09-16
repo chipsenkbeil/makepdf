@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt};
+use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt};
 use mlua::prelude::*;
 use printpdf::{
     path::{PaintMode, WindingOrder},
@@ -12,11 +12,24 @@ pub struct PdfObjectRect {
     pub depth: Option<i64>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
+    pub link: Option<PdfLink>,
 }
 
 impl PdfObjectRect {
+    /// Returns a collection of link annotations.
+    pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
+        match self.link.clone() {
+            Some(link) => vec![PdfLinkAnnotation {
+                bounds: self.bounds,
+                depth: self.depth.unwrap_or_default(),
+                link,
+            }],
+            None => Vec::new(),
+        }
+    }
+
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: PdfContext<'_>) {
+    pub fn draw(&self, ctx: PdfContext) {
         // Get optional values, setting defaults when not specified
         let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
         let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
@@ -42,6 +55,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
+        table.raw_set("link", self.link)?;
 
         Ok(LuaValue::Table(table))
     }
@@ -58,6 +72,7 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                     depth: table.raw_get_ext("depth")?,
                     fill_color: table.raw_get_ext("fill_color")?,
                     outline_color: table.raw_get_ext("outline_color")?,
+                    link: table.raw_get_ext("link")?,
                 })
             }
             _ => Err(LuaError::FromLuaConversionError {

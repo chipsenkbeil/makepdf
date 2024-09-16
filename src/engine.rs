@@ -8,11 +8,12 @@ pub use hooks::EngineHooks;
 use pages::*;
 use script::Script;
 
-use crate::pdf::{Pdf, PdfConfig, PdfContext};
+use crate::pdf::{Pdf, PdfConfig, PdfContext, PdfLink};
 use anyhow::Context;
 use std::collections::HashMap;
 
-/// PDF generation engine.
+/// PDF generation engine, using `T` as a state machine to progress through a series of steps
+/// towards generating and saving a PDF.
 pub struct Engine<T>(T);
 
 impl Engine<()> {
@@ -133,11 +134,46 @@ impl Engine<(PdfConfig, EnginePages)> {
         // based on the page's id
         for page in pages {
             if let Some((_, layer)) = refs.get(&page.id) {
-                page.draw(PdfContext {
+                let ctx = PdfContext {
                     config: &config,
                     font: &font,
                     layer,
-                });
+                };
+
+                page.draw(ctx);
+
+                // Get annotations, sorted by depth, that we will add to our layer
+                let mut annotations = page.link_annotations(ctx);
+                annotations.sort_unstable_by(|a, b| a.depth.cmp(&b.depth));
+
+                for annotation in annotations {
+                    use printpdf::{Actions, Destination, LinkAnnotation};
+
+                    // Map our link to an action, which can be none if it's an invalid action
+                    // such as linking to a page that does not exist
+                    let action = match annotation.link {
+                        PdfLink::GoTo { page } => refs.get(&page).map(|x| x.0.page).map(|page| {
+                            Actions::go_to(Destination::XYZ {
+                                page,
+                                left: None,
+                                top: None,
+                                zoom: None,
+                            })
+                        }),
+                        PdfLink::Uri { uri } => Some(Actions::uri(uri)),
+                    };
+
+                    // If we have an action, add an annotation for it
+                    if let Some(action) = action {
+                        layer.add_link_annotation(LinkAnnotation::new(
+                            annotation.bounds.into(),
+                            None,
+                            None,
+                            action,
+                            None,
+                        ));
+                    }
+                }
             }
         }
 

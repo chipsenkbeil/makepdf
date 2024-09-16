@@ -1,16 +1,17 @@
-use crate::pdf::{PdfBounds, PdfContext, PdfObject};
+use crate::pdf::{PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfObject};
 use mlua::prelude::*;
 
 /// Represents a group of objects to be drawn in the PDF.
 #[derive(Clone, Debug)]
 pub struct PdfObjectGroup {
     pub objects: Vec<PdfObject>,
+    pub link: Option<PdfLink>,
 }
 
 impl PdfObjectGroup {
     /// Returns bounds for the group by calculating the bounds of each object within the group and
     /// returning the minimum bounds that will contain all of them.
-    pub fn bounds(&self, ctx: PdfContext<'_>) -> PdfBounds {
+    pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
         let mut bounds = PdfBounds::default();
 
         for obj in self.objects.iter() {
@@ -34,6 +35,27 @@ impl PdfObjectGroup {
 
         bounds
     }
+
+    /// Returns a collection of link annotations.
+    pub fn link_annotations(&self, ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
+        // Get initial links for group overall
+        let mut links = match self.link.clone() {
+            Some(link) => vec![PdfLinkAnnotation {
+                bounds: self.bounds(ctx),
+                depth: self.depth(),
+                link,
+            }],
+            None => Vec::new(),
+        };
+
+        // Combine it with each object's links
+        for obj in self.objects.iter() {
+            links.extend(obj.link_annotations(ctx));
+        }
+
+        links
+    }
+
     /// Returns depth for the group by examining the depth of each object and selecting the
     /// largest depth that will include them all. This means that objects with an earlier depth
     /// will be drawn at a later position.
@@ -99,6 +121,7 @@ impl FromIterator<PdfObject> for PdfObjectGroup {
     fn from_iter<I: IntoIterator<Item = PdfObject>>(iter: I) -> Self {
         Self {
             objects: iter.into_iter().collect(),
+            link: None,
         }
     }
 }
@@ -112,6 +135,8 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
             table.raw_push(obj)?;
         }
 
+        table.raw_set("link", self.link)?;
+
         Ok(LuaValue::Table(table))
     }
 }
@@ -121,7 +146,8 @@ impl<'lua> FromLua<'lua> for PdfObjectGroup {
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => Ok(Self {
-                objects: table.sequence_values().collect::<LuaResult<_>>()?,
+                objects: table.clone().sequence_values().collect::<LuaResult<_>>()?,
+                link: table.raw_get_ext("link")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

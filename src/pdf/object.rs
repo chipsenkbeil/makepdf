@@ -10,7 +10,7 @@ pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;
 pub use text::PdfObjectText;
 
-use crate::pdf::{PdfBounds, PdfContext, PdfLuaTableExt};
+use crate::pdf::{PdfBounds, PdfContext, PdfLinkAnnotation, PdfLuaTableExt};
 use mlua::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -55,6 +55,17 @@ impl PdfObject {
             Self::Text(x) => x.depth,
         }
         .unwrap_or_default()
+    }
+
+    /// Returns a collection of link annotations.
+    pub fn link_annotations(&self, ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
+        match self {
+            Self::Group(x) => x.link_annotations(ctx),
+            Self::Line(x) => x.link_annotations(ctx),
+            Self::Rect(x) => x.link_annotations(ctx),
+            Self::Shape(x) => x.link_annotations(ctx),
+            Self::Text(x) => x.link_annotations(ctx),
+        }
     }
 
     /// Draws the object within the PDF.

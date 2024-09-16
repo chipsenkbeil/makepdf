@@ -2,7 +2,9 @@ mod style;
 
 pub use style::PdfObjectLineStyle;
 
-use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLuaTableExt, PdfPoint};
+use crate::pdf::{
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfPoint,
+};
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
 
@@ -15,6 +17,7 @@ pub struct PdfObjectLine {
     pub outline_color: Option<PdfColor>,
     pub thickness: Option<f32>,
     pub style: Option<PdfObjectLineStyle>,
+    pub link: Option<PdfLink>,
 }
 
 impl PdfObjectLine {
@@ -42,6 +45,18 @@ impl PdfObjectLine {
         }
 
         PdfBounds::new(ll, ur)
+    }
+
+    /// Returns a collection of link annotations.
+    pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
+        match self.link.clone() {
+            Some(link) => vec![PdfLinkAnnotation {
+                bounds: self.bounds(),
+                depth: self.depth.unwrap_or_default(),
+                link,
+            }],
+            None => Vec::new(),
+        }
     }
 
     /// Draws the object within the PDF.
@@ -92,6 +107,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
+        table.raw_set("link", self.link)?;
 
         Ok(LuaValue::Table(table))
     }
@@ -108,6 +124,7 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
                 outline_color: table.raw_get_ext("outline_color")?,
                 thickness: table.raw_get_ext("thickness")?,
                 style: table.raw_get_ext("style")?,
+                link: table.raw_get_ext("link")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),

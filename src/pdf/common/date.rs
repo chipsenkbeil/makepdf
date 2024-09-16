@@ -1,5 +1,6 @@
 use crate::pdf::{PdfLuaExt, PdfLuaTableExt};
 use chrono::prelude::*;
+use chrono::Datelike;
 use chrono::{Days, Months};
 use mlua::prelude::*;
 use std::cmp::Ordering;
@@ -12,6 +13,13 @@ use std::str::FromStr;
 pub struct PdfDate(NaiveDate);
 
 impl PdfDate {
+    /// Returns the year associated with the date.
+    ///
+    /// Negatives represent BCE. e.g. -309 == 308 BCE.
+    pub fn year(&self) -> i32 {
+        self.0.year()
+    }
+
     /// Creates a new date for beginning of `year`. Returns None if invalid.
     pub fn beginning_of_year(year: i32) -> Option<Self> {
         NaiveDate::from_ymd_opt(year, 1, 1).map(PdfDate)

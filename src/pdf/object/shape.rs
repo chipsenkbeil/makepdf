@@ -1,5 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLuaTableExt, PdfPaintMode, PdfPoint, PdfWindingOrder,
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfPaintMode,
+    PdfPoint, PdfWindingOrder,
 };
 use mlua::prelude::*;
 use printpdf::Polygon;
@@ -13,6 +14,7 @@ pub struct PdfObjectShape {
     pub outline_color: Option<PdfColor>,
     pub mode: Option<PdfPaintMode>,
     pub order: Option<PdfWindingOrder>,
+    pub link: Option<PdfLink>,
 }
 
 impl PdfObjectShape {
@@ -42,8 +44,20 @@ impl PdfObjectShape {
         PdfBounds::new(ll, ur)
     }
 
+    /// Returns a collection of link annotations.
+    pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
+        match self.link.clone() {
+            Some(link) => vec![PdfLinkAnnotation {
+                bounds: self.bounds(),
+                depth: self.depth.unwrap_or_default(),
+                link,
+            }],
+            None => Vec::new(),
+        }
+    }
+
     /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: PdfContext<'_>) {
+    pub fn draw(&self, ctx: PdfContext) {
         // Get optional values, setting defaults when not specified
         let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
         let outline_color = self.fill_color.unwrap_or(ctx.config.page.outline_color);
@@ -75,6 +89,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectShape {
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("mode", self.mode)?;
         table.raw_set("order", self.order)?;
+        table.raw_set("link", self.link)?;
 
         Ok(LuaValue::Table(table))
     }
@@ -91,10 +106,11 @@ impl<'lua> FromLua<'lua> for PdfObjectShape {
                 outline_color: table.raw_get_ext("outline_color")?,
                 mode: table.raw_get_ext("mode")?,
                 order: table.raw_get_ext("order")?,
+                link: table.raw_get_ext("link")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
-                to: "pdf.object.rect",
+                to: "pdf.object.shape",
                 message: None,
             }),
         }

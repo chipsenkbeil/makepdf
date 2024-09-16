@@ -65,6 +65,15 @@ pdf.planner = {
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
 
+---@alias pdf.common.Link
+---| {type:"goto", page:integer}
+---| {type:"uri", uri:string}
+
+---@alias pdf.common.LinkArg
+---| integer #representing a page's id
+---| string #representing a URI
+---| pdf.common.Link
+
 ---@alias pdf.common.PointArg
 ---| pdf.common.Point
 ---| {[1]:number, [2]:number}
@@ -215,11 +224,20 @@ pdf.object = {}
 local PdfObjectGroup = {
     ---@type "group"
     type = "group",
+    ---@type pdf.common.Link|nil
+    link = nil,
+}
+
+---@class pdf.object.GroupArgs
+---@field [number] pdf.Object
+local PdfObjectGroupArgs = {
+    ---@type pdf.common.LinkArg|nil
+    link = nil,
 }
 
 ---Creates a new group object.
 ---
----@param tbl pdf.Object[] #list of objects to group together
+---@param tbl pdf.object.GroupArgs
 ---@return pdf.object.Group
 function pdf.object.group(tbl) end
 
@@ -240,6 +258,8 @@ local PdfObjectLine = {
     thickness = nil,
     ---@type pdf.object.line.Style|nil
     style = nil,
+    ---@type pdf.common.Link|nil
+    link = nil,
 }
 
 ---@class pdf.object.LineArgs
@@ -255,6 +275,8 @@ local PdfObjectLineArgs = {
     thickness = nil,
     ---@type pdf.object.line.Style|nil
     style = nil,
+    ---@type pdf.common.LinkArg|nil
+    link = nil,
 }
 
 ---Creates a new line object.
@@ -277,13 +299,47 @@ local PdfObjectRect = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type pdf.common.Link|nil
+    link = nil,
 }
 
+---@class pdf.object.RectArgsBase
+local PdfObjectRectArgsBase = {
+    ---@type integer|nil
+    depth = nil,
+    ---@type pdf.common.Color|nil
+    fill_color = nil,
+    ---@type pdf.common.Color|nil
+    outline_color = nil,
+    ---@type pdf.common.LinkArg|nil
+    link = nil,
+}
+
+---@class pdf.object.RectArgs1: pdf.object.RectArgsBase
+---@field ll {x:number, y:number}
+---@field ur {x:number, y:number}
+
+---@class pdf.object.RectArgs2: pdf.object.RectArgsBase
+---@field llx number
+---@field lly number
+---@field urx number
+---@field ury number
+
+---@class pdf.object.RectArgs3: pdf.object.RectArgsBase
+---@field [1] {[1]:number, [2]:number}
+---@field [2] {[1]:number, [2]:number}
+
+---@class pdf.object.RectArgs4: pdf.object.RectArgsBase
+---@field [1] number
+---@field [2] number
+---@field [3] number
+---@field [4] number
+
 ---@alias pdf.object.RectArgs
----| {ll:{x:number, y:number}, ur:{x:number, y:number}, depth:integer|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
----| {llx:number, lly:number, urx:number, ury:number, depth:integer|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
----| {[1]:{[1]:number, [2]:number}, [2]:{[1]:number, [2]:number}, depth:integer|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
----| {[1]:number, [2]:number, [3]:number, [4]:number, depth:integer|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
+---| pdf.object.RectArgs1
+---| pdf.object.RectArgs2
+---| pdf.object.RectArgs3
+---| pdf.object.RectArgs4
 
 ---Creates a new rect object.
 ---
@@ -306,6 +362,8 @@ local PdfObjectShape = {
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
     order = nil,
+    ---@type pdf.common.Link|nil
+    link = nil,
 }
 
 ---@class pdf.object.ShapeArgs
@@ -321,6 +379,8 @@ local PdfObjectShapeArgs = {
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
     order = nil,
+    ---@type pdf.common.LinkArg|nil
+    link = nil,
 }
 
 ---Creates a new shape object.
@@ -347,11 +407,37 @@ local PdfObjectText = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type pdf.common.Link|nil
+    link = nil,
 }
 
+---@class pdf.object.TextArgsBase
+local PdfObjectTextArgsBase = {
+    ---@type string
+    text = "",
+    ---@type integer|nil
+    depth = nil,
+    ---@type number|nil
+    size = nil,
+    ---@type pdf.common.Color|nil
+    fill_color = nil,
+    ---@type pdf.common.Color|nil
+    outline_color = nil,
+    ---@type pdf.common.LinkArg|nil
+    link = nil,
+}
+
+---@class pdf.object.TextArgs1: pdf.object.TextArgsBase
+---@field x number
+---@field y number
+
+---@class pdf.object.TextArgs2: pdf.object.TextArgsBase
+---@field [1] number
+---@field [2] number
+
 ---@alias pdf.object.TextArgs
----| {x:number, y:number, text:string, depth:integer|nil, size:number|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
----| {[1]:number, [2]:number, text:string, depth:integer|nil, size:number|nil, fill_color:pdf.common.Color|nil, outline_color:pdf.common.Color|nil}
+---| pdf.object.TextArgs1
+---| pdf.object.TextArgs2
 
 ---Creates a new text object.
 ---

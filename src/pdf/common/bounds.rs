@@ -1,6 +1,6 @@
 use crate::pdf::{PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
-use printpdf::Mm;
+use printpdf::{Mm, Rect};
 
 /// Coordinate bounds for something within a PDF.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -9,6 +9,12 @@ pub struct PdfBounds {
     pub ll: PdfPoint,
     /// Upper-right coordinates
     pub ur: PdfPoint,
+}
+
+impl From<PdfBounds> for Rect {
+    fn from(bounds: PdfBounds) -> Self {
+        Self::new(bounds.ll.x, bounds.ll.y, bounds.ur.x, bounds.ur.y)
+    }
 }
 
 impl PdfBounds {
