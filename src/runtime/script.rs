@@ -14,7 +14,7 @@ pub struct RuntimeScript {
 
 impl RuntimeScript {
     /// Prefix used for internal script access.
-    const PREFIX: &'static str = "makepdf:";
+    const PREFIX: &'static str = "builtin:";
 
     /// Loads a script from a file (or internally) to be executed.
     ///

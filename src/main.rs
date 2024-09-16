@@ -43,13 +43,15 @@ enum Commands {
         open: bool,
 
         /// Destination for the created PDF file.
-        #[arg(short, long, default_value_t = String::from("planner.pdf"))]
-        output: String,
+        ///
+        /// When no output provided, will use the title as the filename.
+        #[arg(short, long)]
+        output: Option<String>,
 
         /// Path to the script to use to build the PDF.
         ///
         /// Internal scripts are referenced using a special syntax of
-        /// `makepdf:{NAME}` where the name is prefixed with `makepdf:`.
+        /// `builtin:{NAME}` where the name is the builtin script's name.
         #[arg(short, long, default_value_t = PdfConfig::default().script)]
         script: String,
 
@@ -85,6 +87,11 @@ fn main() -> anyhow::Result<()> {
         } => {
             // Translate our dimensions into a width and height we will use for the PDF pages
             let (width, height) = PdfConfigPage::parse_size(&dimensions, dpi)?;
+
+            // If output is not specified, we will use the script's title with a .pdf extension
+            let output = output.unwrap_or_else(|| {
+                format!("{}.pdf", title.replace(|c: char| !c.is_alphanumeric(), "_"))
+            });
 
             // Build our initial configuration based on the commandline arguments and defaults
             let config = PdfConfig {
