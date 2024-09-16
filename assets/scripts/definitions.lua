@@ -61,7 +61,6 @@ pdf.planner = {
 
 ---@alias pdf.common.Color string
 ---@alias pdf.common.Point {x:number, y:number}
----@alias pdf.common.Bounds {ll:pdf.common.Point, ur:pdf.common.Point}
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
 
@@ -83,6 +82,30 @@ pdf.planner = {
 ---| {llx:number, lly:number, urx:number, ury:number}
 ---| {[1]:{[1]:number, [2]:number}, [2]:{[1]:number, [2]:number}}
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
+
+
+---@class pdf.common.Bounds
+---@field ll pdf.common.Point
+---@field ur pdf.common.Point
+local PdfBounds = {}
+
+---Calculates the width of the bounds.
+---
+---Note that if `this` is not provided, then changes made to the bounds
+---will not be leveraged.
+---
+---@param this? pdf.common.Bounds #if provided, will return width dynamically from `this`
+---@return number
+function PdfBounds.width(this) end
+
+---Calculates the height of the bounds.
+---
+---Note that if `this` is not provided, then changes made to the bounds
+---will not be leveraged.
+---
+---@param this? pdf.common.Bounds #if provided, will return height dynamically from `this`
+---@return number
+function PdfBounds.height(this) end
 
 ---@class pdf.common.Date
 local PdfDate = {}
@@ -401,6 +424,8 @@ local PdfObjectText = {
     text = "",
     ---@type integer|nil
     depth = nil,
+    ---@type integer|nil
+    font = nil,
     ---@type number|nil
     size = nil,
     ---@type pdf.common.Color|nil
@@ -411,12 +436,28 @@ local PdfObjectText = {
     link = nil,
 }
 
+---Calculates the bounds of the text object by using its baseline x & y
+---coordinates alongside the associated font. The returned bounds represent
+---the total size and positioning of the text within the PDF accounting for
+---ascenders (e.g. capital letters) and descenders (e.g. letters like 'g').
+---
+---Note that if `this` is not provided, then changes made to the text object
+---such as the text, font, font size, or x & y coordinates will not be
+---leveraged. If any of those have changed since the text object was created,
+---you must recreate it to refresh the bounds calculation.
+---
+---@param this? pdf.object.Text #if provided, will return bounds dynamically for this text
+---@return pdf.common.Bounds
+function PdfObjectText.bounds(this) end
+
 ---@class pdf.object.TextArgsBase
 local PdfObjectTextArgsBase = {
     ---@type string
     text = "",
     ---@type integer|nil
     depth = nil,
+    ---@type integer|nil
+    font = nil,
     ---@type number|nil
     size = nil,
     ---@type pdf.common.Color|nil
@@ -444,6 +485,36 @@ local PdfObjectTextArgsBase = {
 ---@param tbl pdf.object.TextArgs
 ---@return pdf.object.Text
 function pdf.object.text(tbl) end
+
+-------------------------------------------------------------------------------
+-- FONT FUNCTIONS
+-------------------------------------------------------------------------------
+
+---@class pdf.font
+pdf.font = {}
+
+---Adds a new font into the runtime, returning the id associated with the font.
+---
+---If the font has already been added, this returns the cached id.
+---@param path string
+---@return number id
+function pdf.font.add(path) end
+
+---Retrieves the id or sets the id of the fallback font.
+---@param id number
+---@overload fun():number
+function pdf.font.fallback(id) end
+
+---Retrieves a list of the ids of all fonts loaded into the runtime.
+---@return number[]
+function pdf.font.ids() end
+
+---Retrieves the path for the font specified by its id.
+---
+---The builtin font will never have a path.
+---@param id number
+---@return string|nil path
+function pdf.font.path(id) end
 
 -------------------------------------------------------------------------------
 -- UTILITY FUNCTIONS

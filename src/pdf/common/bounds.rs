@@ -1,4 +1,4 @@
-use crate::pdf::{PdfLuaTableExt, PdfPoint};
+use crate::pdf::{PdfLuaExt, PdfLuaTableExt, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Mm, Rect};
 
@@ -86,9 +86,29 @@ impl PdfBounds {
 impl<'lua> IntoLua<'lua> for PdfBounds {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         self.add_to_table(&table)?;
+
+        metatable.raw_set(
+            "width",
+            lua.create_function(move |_, this: Option<Self>| {
+                Ok(this
+                    .map(|this| this.width())
+                    .unwrap_or_else(|| self.width())
+                    .0)
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "height",
+            lua.create_function(move |_, this: Option<Self>| {
+                Ok(this
+                    .map(|this| this.height())
+                    .unwrap_or_else(|| self.height())
+                    .0)
+            })?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }

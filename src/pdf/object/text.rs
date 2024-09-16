@@ -1,8 +1,8 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
-    PdfPoint,
+    PdfBounds, PdfColor, PdfConfig, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt,
+    PdfLuaTableExt, PdfPoint,
 };
-use crate::runtime::RuntimeDocFont;
+use crate::runtime::{RuntimeFontId, RuntimeFonts};
 use mlua::prelude::*;
 use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
@@ -13,6 +13,7 @@ pub struct PdfObjectText {
     pub point: PdfPoint,
     pub text: String,
     pub depth: Option<i64>,
+    pub font: Option<RuntimeFontId>,
     pub size: Option<f32>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
@@ -20,11 +21,25 @@ pub struct PdfObjectText {
 }
 
 impl PdfObjectText {
-    /// Returns bounds for the text by calculating the width and height and applying to
-    /// get the upper-right point.
-    pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
+    /// Draws the object within the PDF.
+    pub fn draw(&self, ctx: PdfContext) {
+        // Get optional values, setting defaults when not specified
         let size = self.size.unwrap_or(ctx.config.page.font_size);
-        self.bounds_impl(ctx.font, size)
+        let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
+        let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
+        let (x, y) = self.point.to_coords();
+
+        // Retrieve the font to use for the text, leveraging the configured font first, otherwise
+        // falling back to a default font
+        if let Some(font_ref) = self
+            .font
+            .and_then(|id| ctx.fonts.get_font_doc_ref(id))
+            .or_else(|| ctx.fonts.get_font_doc_ref(ctx.fallback_font_id))
+        {
+            ctx.layer.set_fill_color(fill_color.into());
+            ctx.layer.set_outline_color(outline_color.into());
+            ctx.layer.use_text(&self.text, size, x, y, font_ref);
+        }
     }
 
     /// Returns a collection of link annotations.
@@ -39,80 +54,19 @@ impl PdfObjectText {
         }
     }
 
-    /// Draws the object within the PDF.
-    pub fn draw(&self, ctx: PdfContext) {
-        // Get optional values, setting defaults when not specified
-        let size = self.size.unwrap_or(ctx.config.page.font_size);
-        let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
-        let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
-        let (x, y) = self.point.to_coords();
-
-        // Set color and render text
-        ctx.layer.set_fill_color(fill_color.into());
-        ctx.layer.set_outline_color(outline_color.into());
-        ctx.layer
-            .use_text(&self.text, size, x, y, ctx.as_font_ref());
-    }
-
     /// Returns bounds for the text by calculating the width and height and applying to
     /// get the upper-right point.
-    fn bounds_impl(&self, font: &RuntimeDocFont, default_size: f32) -> PdfBounds {
-        let x = self.point.x;
-        let y = self.text_ll_y(font, default_size);
-        let width = self.text_width(font, default_size);
-        let height = self.text_height(font, default_size);
-        PdfBounds::from_coords(x, y, x + width, y + height)
-    }
-
-    /// Returns the width of the text in millimeters for the given font face.
-    fn text_width(&self, font: &RuntimeDocFont, default_size: f32) -> Mm {
-        let size = self.size.unwrap_or(default_size);
-        let units_per_em = font.as_face().units_per_em() as f64;
-        let scale = size as f64 / units_per_em;
-
-        // Calculate the total width of the text
-        let text_width = self
-            .text
-            .chars()
-            .map(|ch| {
-                glyph_metrics(font.as_face(), ch as u16)
-                    .map(|glyph| glyph.width as f64 * scale)
-                    .unwrap_or(0.0)
-            })
-            .sum::<f64>();
-
-        Pt(text_width as f32).into()
-    }
-
-    /// Returns the height of the text in millimeters for the given font face.
-    fn text_height(&self, font: &RuntimeDocFont, default_size: f32) -> Mm {
-        let size = self.size.unwrap_or(default_size);
-        let units_per_em = font.as_face().units_per_em() as f64;
-        let ascender = font.as_face().ascender() as f64;
-        let descender = font.as_face().descender() as f64;
-        let line_gap = font.as_face().line_gap() as f64;
-
-        // Calculate the total height of the text
-        let text_height = (ascender - descender + line_gap) * (size as f64 / units_per_em);
-
-        Pt(text_height as f32).into()
-    }
-
-    /// Returns true lower-left y position of text, accounting for descenders (like `p` and `g`).
-    fn text_ll_y(&self, font: &RuntimeDocFont, default_size: f32) -> Mm {
-        let size = self.size.unwrap_or(default_size) as f64;
-        let units_per_em = font.as_face().units_per_em() as f64;
-        let descender = font.as_face().descender() as f64;
-
-        // Calculate the descender max size
-        let descender_mm: Mm = Pt((descender * size / units_per_em) as f32).into();
-
-        // NOTE: For some reason, I need to add instead of subtract the descender
-        //       because the above seems to be yielding a negative descender.
-        //
-        //       I believe this is because the baseline is considered origin (y=0),
-        //       so going below it would yield a negative value.
-        self.point.y + descender_mm
+    pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
+        let size = self.size.unwrap_or(ctx.config.page.font_size);
+        if let Some(face) = self
+            .font
+            .and_then(|id| ctx.fonts.get_font_face(id))
+            .or_else(|| ctx.fonts.get_font_face(ctx.fallback_font_id))
+        {
+            bounds(&self.text, face, size, self.point.x, self.point.y)
+        } else {
+            unreachable!("Fallback font should always be available");
+        }
     }
 }
 
@@ -134,11 +88,13 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let (table, metatable) = lua.create_table_ext()?;
+        let text = self.text.to_string();
 
         self.point.add_to_table(&table)?;
         table.raw_set("text", self.text)?;
         table.raw_set("size", self.size)?;
         table.raw_set("depth", self.depth)?;
+        table.raw_set("font", self.font)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("link", self.link)?;
@@ -147,14 +103,36 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         // by looking up the global config, grabbing the default font size, and accessing
         // the repository of fonts to get the information needed for the current text.
         //
-        // Each of these methods also needs to create a reference to the underlying table
-        // so it can get the current size and text to use.
-        let tbl = table.clone();
+        // This only shows the bounds for the point in time. If the defaults change or the
+        // text object itself changes, this will not update with it. To refresh the function,
+        // the text object needs to be recreated.
         metatable.raw_set(
             "bounds",
-            lua.create_function(move |lua, ()| {
-                let this = Self::from_lua(LuaValue::Table(tbl.clone()), lua)?;
-                Ok(this.bounds())
+            lua.create_function(move |lua, this: Option<Self>| {
+                // Figure out the font's size by loading the explicit size or searching our global
+                // pdf instance for the default page font size
+                let font_size = match this.as_ref().and_then(|this| this.size).or(self.size) {
+                    Some(size) => size,
+                    None => lua.globals().raw_get::<_, PdfConfig>("pdf")?.page.font_size,
+                };
+
+                // Retrieve the loaded fonts so we can figure out the actual text bounds
+                // for the associated font
+                if let Some(fonts) = lua.app_data_ref::<RuntimeFonts>() {
+                    let font_id = match this.as_ref().and_then(|this| this.font).or(self.font) {
+                        Some(id) => Some(id),
+                        None => fonts.fallback_font_id(),
+                    };
+
+                    let point = this.as_ref().map(|this| this.point).unwrap_or(self.point);
+                    if let Some(face) = font_id.and_then(|id| fonts.get_font_face(id)) {
+                        Ok(bounds(&text, face, font_size, point.x, point.y))
+                    } else {
+                        Err(LuaError::runtime("Runtime fallback font is missing"))
+                    }
+                } else {
+                    Err(LuaError::runtime("Runtime fonts are missing"))
+                }
             })?,
         )?;
 
@@ -173,6 +151,7 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
                     text: table.raw_get_ext("text")?,
                     size: table.raw_get_ext("size")?,
                     depth: table.raw_get_ext("depth")?,
+                    font: table.raw_get_ext("font")?,
                     fill_color: table.raw_get_ext("fill_color")?,
                     outline_color: table.raw_get_ext("outline_color")?,
                     link: table.raw_get_ext("link")?,
@@ -185,4 +164,61 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
             }),
         }
     }
+}
+
+/// Returns bounds for the text by calculating the width and height and applying to
+/// get the upper-right point.
+fn bounds(text: &str, face: &Face, font_size: f32, baseline_x: Mm, baseline_y: Mm) -> PdfBounds {
+    let x = baseline_x;
+    let y = text_ll_y(face, font_size, baseline_y);
+    let width = text_width(text, face, font_size);
+    let height = text_height(face, font_size);
+    PdfBounds::from_coords(x, y, x + width, y + height)
+}
+
+/// Returns the width of the text in millimeters for the given font face.
+fn text_width(text: &str, face: &Face, font_size: f32) -> Mm {
+    let units_per_em = face.units_per_em() as f64;
+    let scale = font_size as f64 / units_per_em;
+
+    // Calculate the total width of the text
+    let text_width = text
+        .chars()
+        .map(|ch| {
+            glyph_metrics(face, ch as u16)
+                .map(|glyph| glyph.width as f64 * scale)
+                .unwrap_or(0.0)
+        })
+        .sum::<f64>();
+
+    Pt(text_width as f32).into()
+}
+
+/// Returns the height of the text in millimeters for the given font face.
+fn text_height(face: &Face, font_size: f32) -> Mm {
+    let units_per_em = face.units_per_em() as f64;
+    let ascender = face.ascender() as f64;
+    let descender = face.descender() as f64;
+    let line_gap = face.line_gap() as f64;
+
+    // Calculate the total height of the text
+    let text_height = (ascender - descender + line_gap) * (font_size as f64 / units_per_em);
+
+    Pt(text_height as f32).into()
+}
+
+/// Returns true lower-left y position of text, accounting for descenders (like `p` and `g`).
+fn text_ll_y(face: &Face, font_size: f32, baseline_y: Mm) -> Mm {
+    let units_per_em = face.units_per_em() as f64;
+    let descender = face.descender() as f64;
+
+    // Calculate the descender max size
+    let descender_mm: Mm = Pt((descender * (font_size as f64) / units_per_em) as f32).into();
+
+    // NOTE: For some reason, I need to add instead of subtract the descender
+    //       because the above seems to be yielding a negative descender.
+    //
+    //       I believe this is because the baseline is considered origin (y=0),
+    //       so going below it would yield a negative value.
+    baseline_y + descender_mm
 }
