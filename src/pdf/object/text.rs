@@ -21,14 +21,11 @@ impl PdfObjectText {
     /// Returns bounds for the text by calculating the width and height and applying to
     /// get the upper-right point.
     pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
+        let x = self.point.x;
+        let y = self.text_ll_y(ctx);
         let width = self.text_width(ctx);
         let height = self.text_height(ctx);
-        PdfBounds::from_coords(
-            self.point.x,
-            self.point.y,
-            self.point.x + width,
-            self.point.y + height,
-        )
+        PdfBounds::from_coords(x, y, x + width, y + height)
     }
 
     /// Returns a collection of link annotations.
@@ -63,7 +60,9 @@ impl PdfObjectText {
         let size = self.size.unwrap_or(ctx.config.page.font_size);
         let units_per_em = ctx.as_face().units_per_em() as f64;
         let scale = size as f64 / units_per_em;
-        Pt(self
+
+        // Calculate the total width of the text
+        let text_width = self
             .text
             .chars()
             .map(|ch| {
@@ -71,8 +70,9 @@ impl PdfObjectText {
                     .map(|glyph| glyph.width as f64 * scale)
                     .unwrap_or(0.0)
             })
-            .sum::<f64>() as f32)
-        .into()
+            .sum::<f64>();
+
+        Pt(text_width as f32).into()
     }
 
     /// Returns the height of the text in millimeters for the given font face.
@@ -87,6 +87,23 @@ impl PdfObjectText {
         let text_height = (ascender - descender + line_gap) * (size as f64 / units_per_em);
 
         Pt(text_height as f32).into()
+    }
+
+    /// Returns true lower-left y position of text, accounting for descenders (like `p` and `g`).
+    pub fn text_ll_y(&self, ctx: PdfContext) -> Mm {
+        let size = self.size.unwrap_or(ctx.config.page.font_size) as f64;
+        let units_per_em = ctx.as_face().units_per_em() as f64;
+        let descender = ctx.as_face().descender() as f64;
+
+        // Calculate the descender max size
+        let descender_mm: Mm = Pt((descender * size / units_per_em) as f32).into();
+
+        // NOTE: For some reason, I need to add instead of subtract the descender
+        //       because the above seems to be yielding a negative descender.
+        //
+        //       I believe this is because the baseline is considered origin (y=0),
+        //       so going below it would yield a negative value.
+        self.point.y + descender_mm
     }
 }
 
