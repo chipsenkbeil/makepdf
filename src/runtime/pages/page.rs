@@ -1,4 +1,4 @@
-use super::{EnginePageKey, EnginePageKind, EnginePages};
+use super::{RuntimePageKey, RuntimePageKind, RuntimePages};
 use crate::pdf::{PdfContext, PdfDate, PdfLinkAnnotation, PdfLuaExt, PdfObject};
 use mlua::prelude::*;
 use std::collections::BTreeMap;
@@ -7,12 +7,12 @@ use std::sync::{Arc, RwLock, Weak};
 /// Lua-only struct providing an interface for specialized operations within Lua to manipulate a
 /// PDF page.
 #[derive(Clone, Debug)]
-pub struct EnginePage {
+pub struct RuntimePage {
     /// Unique id associated with the page.
     pub id: u32,
 
     /// Indicates the kind of page.
-    pub kind: EnginePageKind,
+    pub kind: RuntimePageKind,
 
     /// Date associated with the page.
     pub date: PdfDate,
@@ -23,9 +23,9 @@ pub struct EnginePage {
     objects: Arc<RwLock<BTreeMap<i64, Vec<PdfObject>>>>,
 }
 
-impl EnginePage {
+impl RuntimePage {
     /// Creates a new page of `kind` for the specified `date`.
-    pub fn new(kind: EnginePageKind, date: PdfDate) -> Self {
+    pub fn new(kind: RuntimePageKind, date: PdfDate) -> Self {
         Self {
             id: rand::random(),
             kind,
@@ -36,7 +36,7 @@ impl EnginePage {
 
     /// Constructs a key associated with the page.
     #[inline]
-    pub fn key(&self) -> EnginePageKey {
+    pub fn key(&self) -> RuntimePageKey {
         (self.kind, self.date).into()
     }
 
@@ -63,7 +63,7 @@ impl EnginePage {
     }
 }
 
-impl<'lua> IntoLua<'lua> for EnginePage {
+impl<'lua> IntoLua<'lua> for RuntimePage {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let objects = Arc::downgrade(&self.objects);
@@ -82,11 +82,11 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         metatable.raw_set(
             "monthly",
             lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<EnginePages>() {
+                Ok(match lua.app_data_ref::<RuntimePages>() {
                     Some(pages) => maybe_date
                         .or(Some(date))
                         .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(EnginePageKind::Monthly, date)),
+                        .map(|date| pages.get_page_by_date(RuntimePageKind::Monthly, date)),
                     None => None,
                 })
             })?,
@@ -98,11 +98,11 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         metatable.raw_set(
             "weekly",
             lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<EnginePages>() {
+                Ok(match lua.app_data_ref::<RuntimePages>() {
                     Some(pages) => maybe_date
                         .or(Some(date))
                         .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(EnginePageKind::Weekly, date)),
+                        .map(|date| pages.get_page_by_date(RuntimePageKind::Weekly, date)),
                     None => None,
                 })
             })?,
@@ -114,11 +114,11 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         metatable.raw_set(
             "daily",
             lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<EnginePages>() {
+                Ok(match lua.app_data_ref::<RuntimePages>() {
                     Some(pages) => maybe_date
                         .or(Some(date))
                         .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(EnginePageKind::Daily, date)),
+                        .map(|date| pages.get_page_by_date(RuntimePageKind::Daily, date)),
                     None => None,
                 })
             })?,
@@ -130,12 +130,12 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         metatable.raw_set(
             "next_page",
             lua.create_function(move |lua, ()| {
-                Ok(match lua.app_data_ref::<EnginePages>() {
+                Ok(match lua.app_data_ref::<RuntimePages>() {
                     Some(pages) => {
                         let date = match kind {
-                            EnginePageKind::Daily => date.tomorrow(),
-                            EnginePageKind::Monthly => date.next_month(),
-                            EnginePageKind::Weekly => date.next_week(),
+                            RuntimePageKind::Daily => date.tomorrow(),
+                            RuntimePageKind::Monthly => date.next_month(),
+                            RuntimePageKind::Weekly => date.next_week(),
                         };
 
                         // Ensure that we haven't created a date outside the calendar year
@@ -153,12 +153,12 @@ impl<'lua> IntoLua<'lua> for EnginePage {
         metatable.raw_set(
             "prev_page",
             lua.create_function(move |lua, ()| {
-                Ok(match lua.app_data_ref::<EnginePages>() {
+                Ok(match lua.app_data_ref::<RuntimePages>() {
                     Some(pages) => {
                         let date = match kind {
-                            EnginePageKind::Daily => date.yesterday(),
-                            EnginePageKind::Monthly => date.last_month(),
-                            EnginePageKind::Weekly => date.last_week(),
+                            RuntimePageKind::Daily => date.yesterday(),
+                            RuntimePageKind::Monthly => date.last_month(),
+                            RuntimePageKind::Weekly => date.last_week(),
                         };
 
                         // Ensure that we haven't created a date outside the calendar year

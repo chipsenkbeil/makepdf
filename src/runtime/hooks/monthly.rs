@@ -1,4 +1,4 @@
-use super::{EnginePage, OnPageFn};
+use super::{OnPageFn, RuntimePage};
 use anyhow::Context;
 use mlua::OwnedFunction;
 
@@ -12,7 +12,7 @@ impl From<OwnedFunction> for OnMonthlyPageFn {
 }
 
 impl OnPageFn for OnMonthlyPageFn {
-    fn call(&self, page: EnginePage) -> anyhow::Result<()> {
+    fn call(&self, page: RuntimePage) -> anyhow::Result<()> {
         self.0
             .call::<_, ()>(page)
             .context("Failed invoking hook: on_monthly_page")

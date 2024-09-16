@@ -4,15 +4,15 @@ use mlua::{FromLua, IntoLua, Lua};
 use std::ops::{Deref, DerefMut};
 
 /// Represents a script that can be executed to generate a PDF.
-pub struct Script {
-    /// Lua engine that is used to execute the code
+pub struct RuntimeScript {
+    /// Lua runtime that is used to execute the code
     lua: Lua,
 
     /// Code loaded as raw bytes
     bytes: Vec<u8>,
 }
 
-impl Script {
+impl RuntimeScript {
     /// Prefix used for internal script access.
     const PREFIX: &'static str = "makepdf:";
 
@@ -79,7 +79,7 @@ impl Script {
     }
 }
 
-impl Deref for Script {
+impl Deref for RuntimeScript {
     type Target = Lua;
 
     fn deref(&self) -> &Self::Target {
@@ -87,7 +87,7 @@ impl Deref for Script {
     }
 }
 
-impl DerefMut for Script {
+impl DerefMut for RuntimeScript {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.lua
     }

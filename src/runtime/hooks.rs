@@ -6,15 +6,15 @@ pub use daily::OnDailyPageFn;
 pub use monthly::OnMonthlyPageFn;
 pub use weekly::OnWeeklyPageFn;
 
-use crate::engine::EnginePage;
+use crate::runtime::RuntimePage;
 
 /// Abstraction around hook functions that are called when a page is created.
 trait OnPageFn {
     /// Invokes the callback, passing in `page` as an argument.
-    fn call(&self, page: EnginePage) -> anyhow::Result<()>;
+    fn call(&self, page: RuntimePage) -> anyhow::Result<()>;
 }
 
-pub struct EngineHooks {
+pub struct RuntimeHooks {
     /// Invoked when a daily page is created.
     on_daily_page_fns: Vec<OnDailyPageFn>,
     /// Invoked when a monthly page is created.
@@ -23,13 +23,13 @@ pub struct EngineHooks {
     on_weekly_page_fns: Vec<OnWeeklyPageFn>,
 }
 
-impl Default for EngineHooks {
+impl Default for RuntimeHooks {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl EngineHooks {
+impl RuntimeHooks {
     /// Creates a new instance of the hooks container with no registered hooks.
     pub const fn new() -> Self {
         Self {
@@ -55,7 +55,7 @@ impl EngineHooks {
     }
 
     /// Invoke the hook for when a daily page is created.
-    pub fn on_daily_page(&self, page: EnginePage) -> anyhow::Result<()> {
+    pub fn on_daily_page(&self, page: RuntimePage) -> anyhow::Result<()> {
         for f in self.on_daily_page_fns.iter() {
             f.call(page.clone())?;
         }
@@ -64,7 +64,7 @@ impl EngineHooks {
     }
 
     /// Invoke the hook for when a monthly page is created.
-    pub fn on_monthly_page(&self, page: EnginePage) -> anyhow::Result<()> {
+    pub fn on_monthly_page(&self, page: RuntimePage) -> anyhow::Result<()> {
         for f in self.on_monthly_page_fns.iter() {
             f.call(page.clone())?;
         }
@@ -73,7 +73,7 @@ impl EngineHooks {
     }
 
     /// Invoke the hook for when a weekly page is created.
-    pub fn on_weekly_page(&self, page: EnginePage) -> anyhow::Result<()> {
+    pub fn on_weekly_page(&self, page: RuntimePage) -> anyhow::Result<()> {
         for f in self.on_weekly_page_fns.iter() {
             f.call(page.clone())?;
         }

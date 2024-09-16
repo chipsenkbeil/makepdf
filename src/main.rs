@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use makepdf::{Engine, PdfConfig, PdfConfigPage, PdfConfigPlanner};
+use makepdf::{PdfConfig, PdfConfigPage, PdfConfigPlanner, Runtime};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -99,14 +99,14 @@ fn main() -> anyhow::Result<()> {
 
             // Do the actual process of
             //
-            // 1. Creating an engine for the given configuration
+            // 1. Creating a runtime for the given configuration
             // 2. Setup the configuration by running a Lua script to modify it
             // 3. Run post-script hooks that will create internal pages & objects
             // 4. Translate the internal pages & objects into the actual PDF
             // 5. Save the PDF to disk
-            Engine::new(config)
+            Runtime::new(config)
                 .setup()
-                .context("Failed to setup PDF engine")?
+                .context("Failed to setup PDF runtime")?
                 .run_hooks()
                 .context("Failed to run PDF hooks")?
                 .build()

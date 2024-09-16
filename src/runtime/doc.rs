@@ -1,19 +1,17 @@
 mod font;
 
-pub use font::EngineDocFont;
+pub use font::{RuntimeDocFont, RuntimeDocFonts};
 
-use crate::constants::DEFAULT_FONT;
 use anyhow::Context;
-use owned_ttf_parser::OwnedFace;
 use printpdf::{Mm, PdfDocument, PdfDocumentReference, PdfLayerReference, PdfPageReference};
 use std::fs::File;
 use std::io::BufWriter;
 
-pub struct EngineDoc {
+pub struct RuntimeDoc {
     doc: PdfDocumentReference,
 }
 
-impl EngineDoc {
+impl RuntimeDoc {
     /// Creates a new, empty document named `title`.
     pub fn new(title: &str) -> Self {
         Self {
@@ -37,19 +35,19 @@ impl EngineDoc {
     }
 
     /// Loads a font into the document, returning a wrapper around the font.
-    pub fn load_font(&self, path: Option<&str>) -> anyhow::Result<EngineDocFont> {
-        let font_bytes = match path {
-            Some(path) => std::fs::read(path).context("Failed to read font")?,
-            None => DEFAULT_FONT.to_vec(),
+    pub fn load_font(&self, path: Option<&str>) -> anyhow::Result<RuntimeDocFont> {
+        let mut font = match path {
+            Some(path) => RuntimeDocFont::load(path)?,
+            None => RuntimeDocFont::system()?,
         };
-        let face = OwnedFace::from_vec(font_bytes, 0).context("Failed to build font into face")?;
 
-        let font = self
-            .doc
-            .add_external_font(face.as_slice())
-            .context("Failed to add external font")?;
+        font.font = Some(
+            self.doc
+                .add_external_font(font.as_slice())
+                .context("Failed to add external font")?,
+        );
 
-        Ok(EngineDocFont { face, font })
+        Ok(font)
     }
 
     /// Saves the doc to the specified `filename`.

@@ -2,9 +2,9 @@ mod key;
 mod kind;
 mod page;
 
-pub use key::EnginePageKey;
-pub use kind::EnginePageKind;
-pub use page::EnginePage;
+pub use key::RuntimePageKey;
+pub use kind::RuntimePageKind;
+pub use page::RuntimePage;
 
 use crate::pdf::{PdfConfigPlanner, PdfDate};
 use anyhow::Context;
@@ -13,39 +13,39 @@ use std::collections::HashMap;
 
 /// Manages a collection of pages.
 #[derive(Debug, Default)]
-pub struct EnginePages {
+pub struct RuntimePages {
     /// Collection of page key -> page.
-    pages: HashMap<EnginePageKey, EnginePage>,
+    pages: HashMap<RuntimePageKey, RuntimePage>,
 }
 
-impl<'a> IntoIterator for &'a EnginePages {
-    type Item = &'a EnginePage;
-    type IntoIter = std::collections::hash_map::Values<'a, EnginePageKey, EnginePage>;
+impl<'a> IntoIterator for &'a RuntimePages {
+    type Item = &'a RuntimePage;
+    type IntoIter = std::collections::hash_map::Values<'a, RuntimePageKey, RuntimePage>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.pages.values()
     }
 }
 
-impl<'a> IntoIterator for &'a mut EnginePages {
-    type Item = &'a mut EnginePage;
-    type IntoIter = std::collections::hash_map::ValuesMut<'a, EnginePageKey, EnginePage>;
+impl<'a> IntoIterator for &'a mut RuntimePages {
+    type Item = &'a mut RuntimePage;
+    type IntoIter = std::collections::hash_map::ValuesMut<'a, RuntimePageKey, RuntimePage>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.pages.values_mut()
     }
 }
 
-impl IntoIterator for EnginePages {
-    type Item = EnginePage;
-    type IntoIter = std::collections::hash_map::IntoValues<EnginePageKey, Self::Item>;
+impl IntoIterator for RuntimePages {
+    type Item = RuntimePage;
+    type IntoIter = std::collections::hash_map::IntoValues<RuntimePageKey, Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.pages.into_values()
     }
 }
 
-impl EnginePages {
+impl RuntimePages {
     /// Builds a set of empty pages based on the PDF configuration.
     pub fn for_planner(config: &PdfConfigPlanner) -> anyhow::Result<Self> {
         let mut pages = Self {
@@ -89,16 +89,16 @@ impl EnginePages {
     }
 
     /// Returns an iterator over the keys of the pages.
-    pub fn keys(&self) -> impl Iterator<Item = EnginePageKey> + '_ {
+    pub fn keys(&self) -> impl Iterator<Item = RuntimePageKey> + '_ {
         self.pages.keys().copied()
     }
 
     /// Returns an iterator over the pages representing months.
     ///
     /// The iterator traverses the months in order.
-    pub fn iter_monthly_pages(&self) -> impl Iterator<Item = EnginePage> + '_ {
+    pub fn iter_monthly_pages(&self) -> impl Iterator<Item = RuntimePage> + '_ {
         (0..12).flat_map(|i| {
-            let key = EnginePageKey::from((EnginePageKind::Monthly, i));
+            let key = RuntimePageKey::from((RuntimePageKind::Monthly, i));
             self.get_page(key)
         })
     }
@@ -106,9 +106,9 @@ impl EnginePages {
     /// Returns an iterator over the pages representing weeks.
     ///
     /// The iterator traverses the weeks in order.
-    pub fn iter_weekly_pages(&self) -> impl Iterator<Item = EnginePage> + '_ {
+    pub fn iter_weekly_pages(&self) -> impl Iterator<Item = RuntimePage> + '_ {
         (0..53).flat_map(|i| {
-            let key = EnginePageKey::from((EnginePageKind::Weekly, i));
+            let key = RuntimePageKey::from((RuntimePageKind::Weekly, i));
             self.get_page(key)
         })
     }
@@ -116,47 +116,47 @@ impl EnginePages {
     /// Returns an iterator over the pages representing days.
     ///
     /// The iterator traverses the days in order.
-    pub fn iter_daily_pages(&self) -> impl Iterator<Item = EnginePage> + '_ {
+    pub fn iter_daily_pages(&self) -> impl Iterator<Item = RuntimePage> + '_ {
         (0..366).flat_map(|i| {
-            let key = EnginePageKey::from((EnginePageKind::Daily, i));
+            let key = RuntimePageKey::from((RuntimePageKind::Daily, i));
             self.get_page(key)
         })
     }
 
     /// Adds a monthly page for the given `date`.
-    pub fn add_monthly_page(&mut self, date: impl Into<PdfDate>) -> EnginePageKey {
-        self.add_page(EnginePageKind::Monthly, date)
+    pub fn add_monthly_page(&mut self, date: impl Into<PdfDate>) -> RuntimePageKey {
+        self.add_page(RuntimePageKind::Monthly, date)
     }
 
     /// Adds a weekly page for the given `date`.
-    pub fn add_weekly_page(&mut self, date: impl Into<PdfDate>) -> EnginePageKey {
-        self.add_page(EnginePageKind::Weekly, date)
+    pub fn add_weekly_page(&mut self, date: impl Into<PdfDate>) -> RuntimePageKey {
+        self.add_page(RuntimePageKind::Weekly, date)
     }
 
     /// Adds a daily page for the given `date`.
-    pub fn add_daily_page(&mut self, date: impl Into<PdfDate>) -> EnginePageKey {
-        self.add_page(EnginePageKind::Daily, date)
+    pub fn add_daily_page(&mut self, date: impl Into<PdfDate>) -> RuntimePageKey {
+        self.add_page(RuntimePageKind::Daily, date)
     }
 
     /// Creates and inserts an empty page of `kind` at `date`.
-    pub fn add_page(&mut self, kind: EnginePageKind, date: impl Into<PdfDate>) -> EnginePageKey {
-        self.insert_page(EnginePage::new(kind, date.into()))
+    pub fn add_page(&mut self, kind: RuntimePageKind, date: impl Into<PdfDate>) -> RuntimePageKey {
+        self.insert_page(RuntimePage::new(kind, date.into()))
     }
 
     /// Inserts a page by its `key`, returning the key itself.
-    pub fn insert_page(&mut self, page: EnginePage) -> EnginePageKey {
+    pub fn insert_page(&mut self, page: RuntimePage) -> RuntimePageKey {
         let key = page.key();
         self.pages.insert(key, page);
         key
     }
 
     /// Retrieves a copy of a page by its `key`.
-    pub fn get_page(&self, key: EnginePageKey) -> Option<EnginePage> {
+    pub fn get_page(&self, key: RuntimePageKey) -> Option<RuntimePage> {
         self.pages.get(&key).cloned()
     }
 
     /// Retrieves a copy of a page by its `kind` and `date`.
-    pub fn get_page_by_date(&self, kind: EnginePageKind, date: PdfDate) -> Option<EnginePage> {
+    pub fn get_page_by_date(&self, kind: RuntimePageKind, date: PdfDate) -> Option<RuntimePage> {
         self.get_page((kind, date).into())
     }
 }

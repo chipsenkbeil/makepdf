@@ -1,5 +1,5 @@
-use crate::engine::EngineHooks;
 use crate::pdf::PdfLuaExt;
+use crate::runtime::RuntimeHooks;
 use mlua::prelude::*;
 
 /// Lua-only struct providing an interface for specialized hook registration.
@@ -14,7 +14,7 @@ impl<'lua> IntoLua<'lua> for PdfHooks {
         metatable.raw_set(
             "on_daily_page",
             lua.create_function(|lua, f: LuaOwnedFunction| {
-                match lua.app_data_mut::<EngineHooks>() {
+                match lua.app_data_mut::<RuntimeHooks>() {
                     Some(mut hooks) => {
                         hooks.register_on_daily_page(f);
                         Ok(())
@@ -27,7 +27,7 @@ impl<'lua> IntoLua<'lua> for PdfHooks {
         metatable.raw_set(
             "on_monthly_page",
             lua.create_function(|lua, f: LuaOwnedFunction| {
-                match lua.app_data_mut::<EngineHooks>() {
+                match lua.app_data_mut::<RuntimeHooks>() {
                     Some(mut hooks) => {
                         hooks.register_on_monthly_page(f);
                         Ok(())
@@ -40,7 +40,7 @@ impl<'lua> IntoLua<'lua> for PdfHooks {
         metatable.raw_set(
             "on_weekly_page",
             lua.create_function(|lua, f: LuaOwnedFunction| {
-                match lua.app_data_mut::<EngineHooks>() {
+                match lua.app_data_mut::<RuntimeHooks>() {
                     Some(mut hooks) => {
                         hooks.register_on_weekly_page(f);
                         Ok(())

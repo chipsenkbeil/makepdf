@@ -3,39 +3,39 @@ mod hooks;
 mod pages;
 mod script;
 
-pub use doc::{EngineDoc, EngineDocFont};
-pub use hooks::EngineHooks;
+pub use doc::{RuntimeDoc, RuntimeDocFont, RuntimeDocFonts};
+pub use hooks::RuntimeHooks;
 use pages::*;
-use script::Script;
+use script::RuntimeScript;
 
 use crate::pdf::{Pdf, PdfConfig, PdfContext, PdfLink};
 use anyhow::Context;
 use std::collections::HashMap;
 
-/// PDF generation engine, using `T` as a state machine to progress through a series of steps
+/// PDF generation runtime, using `T` as a state machine to progress through a series of steps
 /// towards generating and saving a PDF.
-pub struct Engine<T>(T);
+pub struct Runtime<T>(T);
 
-impl Engine<()> {
-    /// Creates a new engine for the provided `config`.
-    pub fn new(config: PdfConfig) -> Engine<PdfConfig> {
-        Engine(config)
+impl Runtime<()> {
+    /// Creates a new runtime for the provided `config`.
+    pub fn new(config: PdfConfig) -> Runtime<PdfConfig> {
+        Runtime(config)
     }
 }
 
-impl Engine<PdfConfig> {
+impl Runtime<PdfConfig> {
     /// Runs the configured Lua script to setup the final configuration and register hooks to
     /// process pages of the PDF among other things.
-    pub fn setup(self) -> anyhow::Result<Engine<(PdfConfig, Script, EngineHooks)>> {
+    pub fn setup(self) -> anyhow::Result<Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)>> {
         let config = self.0;
 
         // Initialize a script and relevant application data
         let mut script =
-            Script::load_from_script(&config.script).context("Failed to load script")?;
+            RuntimeScript::load_from_script(&config.script).context("Failed to load script")?;
 
         // Hooks need to be configured as available before running our script as the
         // script can access and register new hooks into the system
-        script.set_app_data(EngineHooks::new());
+        script.set_app_data(RuntimeHooks::new());
 
         // Store a fresh copy of the PDF global into our Lua runtime to be accessible
         script
@@ -51,23 +51,23 @@ impl Engine<PdfConfig> {
             .context("Failed to retrieve PDF information post-script execution")?;
 
         // Retrieve the hooks to process
-        let hooks: EngineHooks = script
+        let hooks: RuntimeHooks = script
             .remove_app_data()
             .context("Missing hooks post-script execution")?;
 
-        Ok(Engine((pdf.config, script, hooks)))
+        Ok(Runtime((pdf.config, script, hooks)))
     }
 }
 
-impl Engine<(PdfConfig, Script, EngineHooks)> {
+impl Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)> {
     /// Runs the hooks that configure the pages to populate the PDF document.
-    pub fn run_hooks(self) -> anyhow::Result<Engine<(PdfConfig, EnginePages)>> {
+    pub fn run_hooks(self) -> anyhow::Result<Runtime<(PdfConfig, RuntimePages)>> {
         let (config, script, hooks) = self.0;
 
         // Create a set of pages configured for the planner. These are not
         // actually created within the doc yet, but are available for access
         // by hooks in advance of us constructing the document.
-        let mut pages = EnginePages::for_planner(&config.planner)?;
+        let mut pages = RuntimePages::for_planner(&config.planner)?;
         let keys = pages.keys().collect::<Vec<_>>();
 
         for key in keys {
@@ -79,13 +79,13 @@ impl Engine<(PdfConfig, Script, EngineHooks)> {
                 script.set_app_data(pages);
 
                 match page.kind {
-                    EnginePageKind::Daily => {
+                    RuntimePageKind::Daily => {
                         hooks.on_daily_page(page)?;
                     }
-                    EnginePageKind::Monthly => {
+                    RuntimePageKind::Monthly => {
                         hooks.on_monthly_page(page)?;
                     }
-                    EnginePageKind::Weekly => {
+                    RuntimePageKind::Weekly => {
                         hooks.on_weekly_page(page)?;
                     }
                 }
@@ -96,21 +96,22 @@ impl Engine<(PdfConfig, Script, EngineHooks)> {
             }
         }
 
-        Ok(Engine((config, pages)))
+        Ok(Runtime((config, pages)))
     }
 }
 
-impl Engine<(PdfConfig, EnginePages)> {
+impl Runtime<(PdfConfig, RuntimePages)> {
     /// Builds the document representing the PDF.
-    pub fn build(self) -> anyhow::Result<Engine<EngineDoc>> {
+    pub fn build(self) -> anyhow::Result<Runtime<RuntimeDoc>> {
         let (config, pages) = self.0;
         let (width, height) = (config.page.width, config.page.height);
 
         // Create our actual PDF document (empty)
-        let doc = EngineDoc::new(&config.title);
+        let doc = RuntimeDoc::new(&config.title);
 
         // Load up our default font to pass into the draw context
         let font = doc.load_font(config.page.font.as_deref())?;
+        let fonts = RuntimeDocFonts::new(font);
 
         // Create the month, week, and daily page instances (in order) based on our internal pages
         let mut refs = HashMap::new();
@@ -136,7 +137,7 @@ impl Engine<(PdfConfig, EnginePages)> {
             if let Some((_, layer)) = refs.get(&page.id) {
                 let ctx = PdfContext {
                     config: &config,
-                    font: &font,
+                    font: fonts.system(),
                     layer,
                 };
 
@@ -177,11 +178,11 @@ impl Engine<(PdfConfig, EnginePages)> {
             }
         }
 
-        Ok(Engine(doc))
+        Ok(Runtime(doc))
     }
 }
 
-impl Engine<EngineDoc> {
+impl Runtime<RuntimeDoc> {
     /// Saves the PDF to the specified `filename`.
     pub fn save(self, filename: impl Into<String>) -> anyhow::Result<()> {
         self.0.save(filename)

@@ -29,9 +29,9 @@ impl Pdf {
 
     /// Creates a new Lua table that contains methods to create objects and other manipulation.
     fn create_object_table(lua: &Lua) -> LuaResult<LuaTable> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
-        table.raw_set(
+        metatable.raw_set(
             "group",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectGroup::from_lua(LuaValue::Table(tbl), lua)
@@ -40,7 +40,7 @@ impl Pdf {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "line",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectLine::from_lua(LuaValue::Table(tbl), lua)
@@ -49,7 +49,7 @@ impl Pdf {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "rect",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectRect::from_lua(LuaValue::Table(tbl), lua)
@@ -58,7 +58,7 @@ impl Pdf {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "shape",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectShape::from_lua(LuaValue::Table(tbl), lua)
@@ -67,7 +67,7 @@ impl Pdf {
             })?,
         )?;
 
-        table.raw_set(
+        metatable.raw_set(
             "text",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectText::from_lua(LuaValue::Table(tbl), lua)
@@ -93,13 +93,6 @@ impl<'lua> IntoLua<'lua> for Pdf {
         table.raw_set("hooks", PdfHooks)?;
         table.raw_set("object", Pdf::create_object_table(lua)?)?;
         table.raw_set("utils", PdfUtils)?;
-
-        // TODO: Some notes on what to do next
-        //
-        // 7. Think through how linking works. do we just have link annotations maintained as a
-        //    list within the pdf? how do we make it work linking an object (with its dimensions)
-        //    to another is easy?
-        // 9. Outline out what we need for the page object provided to the hooks
 
         Ok(LuaValue::Table(table))
     }

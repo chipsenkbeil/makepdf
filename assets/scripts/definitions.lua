@@ -85,97 +85,97 @@ pdf.planner = {
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
 
 ---@class pdf.common.Date
-local Date = {}
+local PdfDate = {}
 
 ---@type integer
-Date.year = 0
+PdfDate.year = 0
 
 ---Between 1 and 12
 ---@type integer
-Date.month = 0
+PdfDate.month = 0
 
 ---Between 1 and 53 (last week of year differs by years)
 ---@type integer
-Date.week = 0
+PdfDate.week = 0
 
 ---Between 1 and 31
 ---@type integer
-Date.day = 0
+PdfDate.day = 0
 
 ---Between 1 and 366 (last day of year differs by years)
 ---@type integer
-Date.ordinal = 0
+PdfDate.ordinal = 0
 
 ---Produces a string based on a formatting syntax from the chrono library.
 ---
 ---See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 ---@param fmt string
 ---@return string
-function Date.format(fmt) end
+function PdfDate.format(fmt) end
 
 ---@param days integer
 ---@return pdf.common.Date|nil
-function Date.add_days(days) end
+function PdfDate.add_days(days) end
 
 ---@param weeks integer
 ---@return pdf.common.Date|nil
-function Date.add_weeks(weeks) end
+function PdfDate.add_weeks(weeks) end
 
 ---@param months integer
 ---@return pdf.common.Date|nil
-function Date.add_months(months) end
+function PdfDate.add_months(months) end
 
 ---@return pdf.common.Date|nil
-function Date.tomorrow() end
+function PdfDate.tomorrow() end
 
 ---@return pdf.common.Date|nil
-function Date.yesterday() end
+function PdfDate.yesterday() end
 
 ---@return pdf.common.Date|nil
-function Date.next_week() end
+function PdfDate.next_week() end
 
 ---@return pdf.common.Date|nil
-function Date.last_week() end
+function PdfDate.last_week() end
 
 ---@return pdf.common.Date|nil
-function Date.next_month() end
+function PdfDate.next_month() end
 
 ---@return pdf.common.Date|nil
-function Date.last_month() end
+function PdfDate.last_month() end
 
 -------------------------------------------------------------------------------
--- ENGINE TYPES
+-- RUNTIME TYPES
 -------------------------------------------------------------------------------
 
----@class pdf.engine.Page
-local Page = {}
+---@class pdf.runtime.Page
+local PdfRuntimePage = {}
 
 ---@type integer
-Page.id = 0
+PdfRuntimePage.id = 0
 
 ---@type pdf.common.Date
-Page.date = {}
+PdfRuntimePage.date = {}
 
 ---@param date pdf.common.Date|string|nil
----@return pdf.engine.Page|nil
-function Page.daily(date) end
+---@return pdf.runtime.Page|nil
+function PdfRuntimePage.daily(date) end
 
 ---@param date pdf.common.Date|string|nil
----@return pdf.engine.Page|nil
-function Page.monthly(date) end
+---@return pdf.runtime.Page|nil
+function PdfRuntimePage.monthly(date) end
 
 ---@param date pdf.common.Date|string|nil
----@return pdf.engine.Page|nil
-function Page.weekly(date) end
+---@return pdf.runtime.Page|nil
+function PdfRuntimePage.weekly(date) end
 
----@return pdf.engine.Page|nil
-function Page.next_page() end
+---@return pdf.runtime.Page|nil
+function PdfRuntimePage.next_page() end
 
----@return pdf.engine.Page|nil
-function Page.prev_page() end
+---@return pdf.runtime.Page|nil
+function PdfRuntimePage.prev_page() end
 
 ---@param obj pdf.Object
-function Page.push(obj) end
+function PdfRuntimePage.push(obj) end
 
 -------------------------------------------------------------------------------
 -- HOOKS FUNCTIONS
@@ -188,21 +188,21 @@ pdf.hooks = {}
 ---
 ---This will append an additional callback on the stack, and
 ---can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.engine.Page)
+---@param f fun(page:pdf.runtime.Page)
 function pdf.hooks.on_daily_page(f) end
 
 ---Register new callback for when a monthly page is created.
 ---
 ---This will append an additional callback on the stack, and
 ---can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.engine.Page)
+---@param f fun(page:pdf.runtime.Page)
 function pdf.hooks.on_monthly_page(f) end
 
 ---Register new callback for when a weekly page is created.
 ---
 ---This will append an additional callback on the stack, and
 ---can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.engine.Page)
+---@param f fun(page:pdf.runtime.Page)
 function pdf.hooks.on_weekly_page(f) end
 
 -------------------------------------------------------------------------------
