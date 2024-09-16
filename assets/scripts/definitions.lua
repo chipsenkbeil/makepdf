@@ -476,9 +476,13 @@ local PdfObjectTextArgsBase = {
 ---@field [1] number
 ---@field [2] number
 
+---@class pdf.object.TextArgs3: pdf.object.TextArgsBase
+---@field [1] {[1]:number, [2]:number}
+
 ---@alias pdf.object.TextArgs
 ---| pdf.object.TextArgs1
 ---| pdf.object.TextArgs2
+---| pdf.object.TextArgs3
 
 ---Creates a new text object.
 ---

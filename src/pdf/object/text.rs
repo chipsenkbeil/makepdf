@@ -145,7 +145,19 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => {
-                let point = PdfPoint::from_lua(LuaValue::Table(table.clone()), lua)?;
+                let maybe_points: Option<Vec<PdfPoint>> = table
+                    .clone()
+                    .sequence_values()
+                    .collect::<LuaResult<_>>()
+                    .ok();
+
+                // Check if the first argument in sequence is a point, otherwise
+                // we assume that the point was flattened into the object
+                let point = match maybe_points.and_then(|p| p.into_iter().next()) {
+                    Some(p) => p,
+                    None => PdfPoint::from_lua(LuaValue::Table(table.clone()), lua)?,
+                };
+
                 Ok(Self {
                     point,
                     text: table.raw_get_ext("text")?,
