@@ -61,6 +61,12 @@ enum Commands {
         #[arg(long, default_value_t = PdfConfigPlanner::default().year)]
         year: i32,
     },
+
+    /// Prints a list of scripts or the contents of a singular script.
+    Script {
+        /// If provided, will print out the script with the specified name
+        name: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -120,6 +126,25 @@ fn main() -> anyhow::Result<()> {
             }
 
             Ok(())
+        }
+        Commands::Script { name } => {
+            use makepdf::constants::SCRIPTS;
+            if let Some(name) = name {
+                match SCRIPTS.get(&name) {
+                    Some(bytes) => {
+                        println!("{}", String::from_utf8_lossy(bytes));
+                        Ok(())
+                    }
+                    None => {
+                        anyhow::bail!("Script {name} is not builtin");
+                    }
+                }
+            } else {
+                for name in SCRIPTS.keys() {
+                    println!("{name}");
+                }
+                Ok(())
+            }
         }
     }
 }
