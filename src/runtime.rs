@@ -10,6 +10,7 @@ pub use hooks::RuntimeHooks;
 use pages::*;
 use script::RuntimeScript;
 
+use crate::constants::GLOBAL_PDF_VAR_NAME;
 use crate::pdf::{Pdf, PdfConfig, PdfContext, PdfLink};
 use anyhow::Context;
 use std::collections::HashMap;
@@ -65,7 +66,7 @@ impl Runtime<PdfConfig> {
 
         // Store a fresh copy of the PDF global into our Lua runtime to be accessible
         script
-            .set_global("pdf", Pdf::new(config))
+            .set_global(GLOBAL_PDF_VAR_NAME, Pdf::new(config))
             .context("Failed to initialize PDF script global")?;
 
         // Do the actual execution of the script
@@ -73,7 +74,7 @@ impl Runtime<PdfConfig> {
 
         // Retrieve the post-script PDF information
         let pdf: Pdf = script
-            .get_global("pdf")
+            .get_global(GLOBAL_PDF_VAR_NAME)
             .context("Failed to retrieve PDF information post-script execution")?;
 
         // Retrieve the hooks to process

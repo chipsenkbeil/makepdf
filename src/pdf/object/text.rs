@@ -1,3 +1,4 @@
+use crate::constants::GLOBAL_PDF_VAR_NAME;
 use crate::pdf::{
     PdfBounds, PdfColor, PdfConfig, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt,
     PdfLuaTableExt, PdfPoint,
@@ -113,7 +114,12 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
                 // pdf instance for the default page font size
                 let font_size = match this.as_ref().and_then(|this| this.size).or(self.size) {
                     Some(size) => size,
-                    None => lua.globals().raw_get::<_, PdfConfig>("pdf")?.page.font_size,
+                    None => {
+                        lua.globals()
+                            .raw_get::<_, PdfConfig>(GLOBAL_PDF_VAR_NAME)?
+                            .page
+                            .font_size
+                    }
                 };
 
                 // Retrieve the loaded fonts so we can figure out the actual text bounds
