@@ -1,3 +1,4 @@
 /target
 *.pdf
 *.lua
+**/.DS_Store
