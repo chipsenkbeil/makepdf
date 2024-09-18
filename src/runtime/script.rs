@@ -13,24 +13,12 @@ pub struct RuntimeScript {
 }
 
 impl RuntimeScript {
-    /// Prefix used for internal script access.
-    const PREFIX: &'static str = "builtin:";
-
     /// Loads a script from a file (or internally) to be executed.
     ///
     /// The act of loading the script does not even parse the code, only loading it into memory.
     pub fn load_from_script(script: impl AsRef<str>) -> anyhow::Result<Self> {
-        let script = script.as_ref();
-
-        // Load our script either from our internal map or an external file
-        let bytes = match script
-            .strip_prefix(Self::PREFIX)
-            .and_then(|s| SCRIPTS.get(s))
-        {
-            Some(bytes) => bytes.to_vec(),
-            None => std::fs::read(script)
-                .with_context(|| format!("Failed to load script '{}'", script))?,
-        };
+        let bytes = std::fs::read(script.as_ref())
+            .with_context(|| format!("Failed to load script '{}'", script.as_ref()))?;
 
         Self::load_from_bytes(bytes)
     }
