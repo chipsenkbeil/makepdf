@@ -52,6 +52,16 @@ impl RuntimeScript {
 
     /// Executes the script. This will eagerly parse and execute the code.
     pub fn exec(&self) -> anyhow::Result<()> {
+        // Before running our user script, we first want to set up additional functionality
+        // via the stdlib script, which should augment what we can do
+        if let Some(stdlib) = SCRIPTS.get("stdlib") {
+            self.lua
+                .load(*stdlib)
+                .exec()
+                .context("Failed to execute stdlib script")?;
+        }
+
+        // Now, execute the user script
         self.lua
             .load(&self.bytes)
             .exec()

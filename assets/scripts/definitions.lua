@@ -1,5 +1,9 @@
 ---@meta
----Primary definition file representing makepdf's Lua library.
+-------------------------------------------------------------------------------
+-- DEFINITIONS
+--
+-- Primary definition file representing makepdf's Lua library.
+-------------------------------------------------------------------------------
 
 ---@class pdf
 pdf = {}
