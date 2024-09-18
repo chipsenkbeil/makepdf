@@ -18,7 +18,7 @@ pub struct PdfConfig {
     pub page: PdfConfigPage,
     /// Configuration tied to a PDF planner
     pub planner: PdfConfigPlanner,
-    /// Path or name of script (e.g. `builtin:panda`)
+    /// Path of script
     pub script: String,
     /// Title of the pdf document
     pub title: String,

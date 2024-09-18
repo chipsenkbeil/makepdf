@@ -19,20 +19,21 @@ makepdf make --year 2035
 makepdf make --dimensions 1404x1879px
 ```
 
-## Builtin Scripts
+## Lua definitions
 
-The CLI includes a couple of batteries-included scripts that can be used to
-generate PDFs without needing to write or even have Lua scripts on your path.
+To get types available when writing your Lua script, check out the
+[definitions.lua](assets/scripts/definitions.lua) and
+[stdlib.lua](assets/scripts/stdlib.lua) files.
 
-```sh
-# Print a list of all available builtin scripts, one per line
-makepdf script
+You can set up a `.luarc.json` file to point to the `assets/` directory or copy
+those files to a different directory local to yourself.
 
-# Print out the source code of the script
-makepdf script example
-
-# Leverage a builtin script to make a pdf
-makepdf make --script builtin:example
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "workspace.library": ["assets/scripts"],
+  "runtime.version": "Lua 5.1",
+}
 ```
 
 ## License
