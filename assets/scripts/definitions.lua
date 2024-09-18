@@ -177,30 +177,55 @@ function PdfDate.last_month() end
 ---@class pdf.runtime.Page
 local PdfRuntimePage = {}
 
+---Unique id associated with the page.
 ---@type integer
 PdfRuntimePage.id = 0
 
+---Date associated with the page.
+---
+---For daily, this is the full date.
+---For weekly, this is the start of the week.
+---For monthly, this is the start of the month.
 ---@type pdf.common.Date
 PdfRuntimePage.date = {}
 
+---Returns the daily page.
+---
+---If no argument provided, returns the daily page for the current page.
+---If a date or string is provided, returns the daily page for that date.
 ---@param date pdf.common.Date|string|nil
 ---@return pdf.runtime.Page|nil
 function PdfRuntimePage.daily(date) end
 
+---Returns the monthly page.
+---
+---If no argument provided, returns the monthly page for the current page.
+---If a date or string is provided, returns the monthly page for that date.
 ---@param date pdf.common.Date|string|nil
 ---@return pdf.runtime.Page|nil
 function PdfRuntimePage.monthly(date) end
 
+---Returns the weekly page.
+---
+---If no argument provided, returns the weekly page for the current page.
+---If a date or string is provided, returns the weekly page for that date.
 ---@param date pdf.common.Date|string|nil
 ---@return pdf.runtime.Page|nil
 function PdfRuntimePage.weekly(date) end
 
+---Returns the next page in sequence.
+---
+---This is specifically the next page of the same kind (daily, weekly, monthly).
 ---@return pdf.runtime.Page|nil
 function PdfRuntimePage.next_page() end
 
+---Returns the previous page in sequence.
+---
+---This is specifically the previous page of the same kind (daily, weekly, monthly).
 ---@return pdf.runtime.Page|nil
 function PdfRuntimePage.prev_page() end
 
+---Pushes a new object onto the page to be rendered during PDF generation.
 ---@param obj pdf.Object
 function PdfRuntimePage.push(obj) end
 
