@@ -6,6 +6,7 @@ pub const GLOBAL_PDF_VAR_NAME: &str = "pdf";
 
 /// Internal scripts available to be run.
 pub static SCRIPTS: phf::Map<&'static str, &[u8]> = phf::phf_map! {
+    "stdlib" => include_bytes!("../assets/scripts/stdlib.lua"),
     "example" => include_bytes!("../assets/scripts/example.lua"),
     "panda" => include_bytes!("../assets/scripts/panda.lua"),
 };
