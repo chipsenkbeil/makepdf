@@ -1,4 +1,6 @@
-use crate::pdf::{PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfObject};
+use crate::pdf::{
+    PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfObject,
+};
 use mlua::prelude::*;
 
 /// Represents a group of objects to be drawn in the PDF.
@@ -34,6 +36,36 @@ impl PdfObjectGroup {
         }
 
         bounds
+    }
+
+    /// Returns bounds for the group by calculating the bounds of each object within the group and
+    /// returning the minimum bounds that will contain all of them.
+    ///
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
+        let mut bounds = PdfBounds::default();
+
+        for obj in self.objects.iter() {
+            let b = obj.lua_bounds(lua)?;
+            if b.ll.x < bounds.ll.x {
+                bounds.ll.x = b.ll.x;
+            }
+
+            if b.ur.x > bounds.ur.x {
+                bounds.ur.x = b.ur.x;
+            }
+
+            if b.ll.y < bounds.ll.y {
+                bounds.ll.y = b.ll.x;
+            }
+
+            if b.ur.y > bounds.ur.y {
+                bounds.ur.y = b.ur.y;
+            }
+        }
+
+        Ok(bounds)
     }
 
     /// Returns a collection of link annotations.
@@ -129,13 +161,18 @@ impl FromIterator<PdfObject> for PdfObjectGroup {
 impl<'lua> IntoLua<'lua> for PdfObjectGroup {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         for obj in self.objects {
             table.raw_push(obj)?;
         }
 
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
