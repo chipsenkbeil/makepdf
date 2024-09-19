@@ -1,4 +1,4 @@
-use crate::pdf::{PdfLuaExt, PdfLuaTableExt, PdfPoint};
+use crate::pdf::{PdfHorizontalAlign, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign};
 use mlua::prelude::*;
 use printpdf::{Mm, Rect};
 
@@ -75,6 +75,38 @@ impl PdfBounds {
         (llx.0, lly.0, urx.0, ury.0)
     }
 
+    /// Returns a new bounds aligned to some other bounds based on `halign` and `valign`
+    /// configuration.
+    pub fn align_to(
+        &self,
+        other: Self,
+        halign: PdfHorizontalAlign,
+        valign: PdfVerticalAlign,
+    ) -> Self {
+        let x_offset = match halign {
+            PdfHorizontalAlign::Left => other.ll.x - self.ll.x,
+            PdfHorizontalAlign::Middle => {
+                other.ll.x - self.ll.x + ((other.width() - self.width()) / 2.0)
+            }
+            PdfHorizontalAlign::Right => other.ur.x - self.ur.x,
+        };
+
+        let y_offset = match valign {
+            PdfVerticalAlign::Top => other.ur.y - self.ur.y,
+            PdfVerticalAlign::Middle => {
+                other.ll.y - self.ll.y + ((other.height() - self.height()) / 2.0)
+            }
+            PdfVerticalAlign::Bottom => other.ll.y - self.ll.y,
+        };
+
+        let mut this = *self;
+        this.ll.x += x_offset;
+        this.ur.x += x_offset;
+        this.ll.y += y_offset;
+        this.ur.y += y_offset;
+        this
+    }
+
     /// Adds bounds fields to an existing Lua table.
     pub fn add_to_table(&self, table: &LuaTable) -> LuaResult<()> {
         table.raw_set("ll", self.ll)?;
@@ -92,22 +124,12 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
 
         metatable.raw_set(
             "width",
-            lua.create_function(move |_, this: Option<Self>| {
-                Ok(this
-                    .map(|this| this.width())
-                    .unwrap_or_else(|| self.width())
-                    .0)
-            })?,
+            lua.create_function(move |_, this: Self| Ok(this.width().0))?,
         )?;
 
         metatable.raw_set(
             "height",
-            lua.create_function(move |_, this: Option<Self>| {
-                Ok(this
-                    .map(|this| this.height())
-                    .unwrap_or_else(|| self.height())
-                    .0)
-            })?,
+            lua.create_function(move |_, this: Self| Ok(this.height().0))?,
         )?;
 
         Ok(LuaValue::Table(table))
@@ -178,6 +200,51 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_support_aligning_with_another_set_of_bounds() {
+        // 5x5 square
+        let this = PdfBounds::from_coords_f32(1.0, 1.0, 6.0, 6.0);
+
+        // 20x20 square
+        let other = PdfBounds::from_coords_f32(5.0, 5.0, 25.0, 25.0);
+
+        // Upper-left
+        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Top);
+        assert_eq!(actual.to_coords_f32(), (5.0, 20.0, 10.0, 25.0));
+
+        // Upper-middle
+        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Top);
+        assert_eq!(actual.to_coords_f32(), (12.5, 20.0, 17.5, 25.0));
+
+        // Upper-right
+        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Top);
+        assert_eq!(actual.to_coords_f32(), (20.0, 20.0, 25.0, 25.0));
+
+        // Middle-left
+        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Middle);
+        assert_eq!(actual.to_coords_f32(), (5.0, 12.5, 10.0, 17.5));
+
+        // Middle-middle
+        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Middle);
+        assert_eq!(actual.to_coords_f32(), (12.5, 12.5, 17.5, 17.5));
+
+        // Middle-right
+        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Middle);
+        assert_eq!(actual.to_coords_f32(), (20.0, 12.5, 25.0, 17.5));
+
+        // Bottom-left
+        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Bottom);
+        assert_eq!(actual.to_coords_f32(), (5.0, 5.0, 10.0, 10.0));
+
+        // Bottom-middle
+        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Bottom);
+        assert_eq!(actual.to_coords_f32(), (12.5, 5.0, 17.5, 10.0));
+
+        // Bottom-right
+        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Bottom);
+        assert_eq!(actual.to_coords_f32(), (20.0, 5.0, 25.0, 10.0));
+    }
 
     #[test]
     fn should_be_able_to_convert_from_lua() {

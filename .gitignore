@@ -1,4 +1,5 @@
 /target
 *.pdf
 *.lua
+!assets/scripts/*.lua
 **/.DS_Store

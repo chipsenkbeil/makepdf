@@ -94,22 +94,12 @@ pdf.planner = {
 local PdfBounds = {}
 
 ---Calculates the width of the bounds.
----
----Note that if `this` is not provided, then changes made to the bounds
----will not be leveraged.
----
----@param this? pdf.common.Bounds #if provided, will return width dynamically from `this`
 ---@return number
-function PdfBounds.width(this) end
+function PdfBounds:width() end
 
 ---Calculates the height of the bounds.
----
----Note that if `this` is not provided, then changes made to the bounds
----will not be leveraged.
----
----@param this? pdf.common.Bounds #if provided, will return height dynamically from `this`
 ---@return number
-function PdfBounds.height(this) end
+function PdfBounds:height() end
 
 ---@class pdf.common.Date
 local PdfDate = {}
@@ -469,15 +459,8 @@ local PdfObjectText = {
 ---coordinates alongside the associated font. The returned bounds represent
 ---the total size and positioning of the text within the PDF accounting for
 ---ascenders (e.g. capital letters) and descenders (e.g. letters like 'g').
----
----Note that if `this` is not provided, then changes made to the text object
----such as the text, font, font size, or x & y coordinates will not be
----leveraged. If any of those have changed since the text object was created,
----you must recreate it to refresh the bounds calculation.
----
----@param this? pdf.object.Text #if provided, will return bounds dynamically for this text
 ---@return pdf.common.Bounds
-function PdfObjectText.bounds(this) end
+function PdfObjectText:bounds() end
 
 ---@class pdf.object.TextArgsBase
 local PdfObjectTextArgsBase = {
