@@ -103,16 +103,12 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         // Add specialized methods to calculate the bounds, width, and height of the text
         // by looking up the global config, grabbing the default font size, and accessing
         // the repository of fonts to get the information needed for the current text.
-        //
-        // This only shows the bounds for the point in time. If the defaults change or the
-        // text object itself changes, this will not update with it. To refresh the function,
-        // the text object needs to be recreated.
         metatable.raw_set(
             "bounds",
-            lua.create_function(move |lua, this: Option<Self>| {
+            lua.create_function(move |lua, this: Self| {
                 // Figure out the font's size by loading the explicit size or searching our global
                 // pdf instance for the default page font size
-                let font_size = match this.as_ref().and_then(|this| this.size).or(self.size) {
+                let font_size = match this.size {
                     Some(size) => size,
                     None => {
                         lua.globals()
@@ -125,14 +121,13 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
                 // Retrieve the loaded fonts so we can figure out the actual text bounds
                 // for the associated font
                 if let Some(fonts) = lua.app_data_ref::<RuntimeFonts>() {
-                    let font_id = match this.as_ref().and_then(|this| this.font).or(self.font) {
+                    let font_id = match this.font {
                         Some(id) => Some(id),
                         None => fonts.fallback_font_id(),
                     };
 
-                    let point = this.as_ref().map(|this| this.point).unwrap_or(self.point);
                     if let Some(face) = font_id.and_then(|id| fonts.get_font_face(id)) {
-                        Ok(bounds(&text, face, font_size, point.x, point.y))
+                        Ok(bounds(&text, face, font_size, this.point.x, this.point.y))
                     } else {
                         Err(LuaError::runtime("Runtime fallback font is missing"))
                     }
