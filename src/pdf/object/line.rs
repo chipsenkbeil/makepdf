@@ -3,7 +3,8 @@ mod style;
 pub use style::PdfObjectLineStyle;
 
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfPoint,
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+    PdfPoint,
 };
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
@@ -94,7 +95,7 @@ impl PdfObjectLine {
 impl<'lua> IntoLua<'lua> for PdfObjectLine {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         // Add the points as a list
         for point in self.points {
@@ -108,6 +109,11 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |_, this: Self| Ok(this.bounds()))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
