@@ -1,4 +1,6 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt};
+use crate::pdf::{
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+};
 use mlua::prelude::*;
 use printpdf::{
     path::{PaintMode, WindingOrder},
@@ -49,13 +51,18 @@ impl PdfObjectRect {
 impl<'lua> IntoLua<'lua> for PdfObjectRect {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         self.bounds.add_to_table(&table)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |_, this: Self| Ok(this.bounds))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
