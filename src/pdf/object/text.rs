@@ -9,7 +9,7 @@ use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PdfObjectText {
     pub point: PdfPoint,
     pub text: String,
@@ -69,6 +69,48 @@ impl PdfObjectText {
             unreachable!("Fallback font should always be available");
         }
     }
+
+    /// Returns bounds for the text by calculating the width and height and applying to get the
+    /// upper-right-point.
+    ///
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
+        // Figure out the font's size by loading the explicit size or searching our global
+        // pdf instance for the default page font size
+        let font_size = match self.size {
+            Some(size) => size,
+            None => {
+                lua.globals()
+                    .raw_get::<_, PdfConfig>(GLOBAL_PDF_VAR_NAME)?
+                    .page
+                    .font_size
+            }
+        };
+
+        // Retrieve the loaded fonts so we can figure out the actual text bounds
+        // for the associated font
+        if let Some(fonts) = lua.app_data_ref::<RuntimeFonts>() {
+            let font_id = match self.font {
+                Some(id) => Some(id),
+                None => fonts.fallback_font_id(),
+            };
+
+            if let Some(face) = font_id.and_then(|id| fonts.get_font_face(id)) {
+                Ok(bounds(
+                    &self.text,
+                    face,
+                    font_size,
+                    self.point.x,
+                    self.point.y,
+                ))
+            } else {
+                Err(LuaError::runtime("Runtime fallback font is missing"))
+            }
+        } else {
+            Err(LuaError::runtime("Runtime fonts are missing"))
+        }
+    }
 }
 
 fn glyph_metrics(face: &Face, glyph_id: u16) -> Option<GlyphMetrics> {
@@ -89,7 +131,6 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let (table, metatable) = lua.create_table_ext()?;
-        let text = self.text.to_string();
 
         self.point.add_to_table(&table)?;
         table.raw_set("text", self.text)?;
@@ -105,36 +146,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         // the repository of fonts to get the information needed for the current text.
         metatable.raw_set(
             "bounds",
-            lua.create_function(move |lua, this: Self| {
-                // Figure out the font's size by loading the explicit size or searching our global
-                // pdf instance for the default page font size
-                let font_size = match this.size {
-                    Some(size) => size,
-                    None => {
-                        lua.globals()
-                            .raw_get::<_, PdfConfig>(GLOBAL_PDF_VAR_NAME)?
-                            .page
-                            .font_size
-                    }
-                };
-
-                // Retrieve the loaded fonts so we can figure out the actual text bounds
-                // for the associated font
-                if let Some(fonts) = lua.app_data_ref::<RuntimeFonts>() {
-                    let font_id = match this.font {
-                        Some(id) => Some(id),
-                        None => fonts.fallback_font_id(),
-                    };
-
-                    if let Some(face) = font_id.and_then(|id| fonts.get_font_face(id)) {
-                        Ok(bounds(&text, face, font_size, this.point.x, this.point.y))
-                    } else {
-                        Err(LuaError::runtime("Runtime fallback font is missing"))
-                    }
-                } else {
-                    Err(LuaError::runtime("Runtime fonts are missing"))
-                }
-            })?,
+            lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
         )?;
 
         Ok(LuaValue::Table(table))
@@ -234,4 +246,71 @@ fn text_ll_y(face: &Face, font_size: f32, baseline_y: Mm) -> Mm {
     //       I believe this is because the baseline is considered origin (y=0),
     //       so going below it would yield a negative value.
     baseline_y + descender_mm
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::Pdf;
+    use crate::runtime::RuntimeFonts;
+    use mlua::chunk;
+    use printpdf::{Mm, PdfDocument};
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_text() {
+        // Create a pdf context that we need for bounds calculations
+        let doc = PdfDocument::empty("");
+        let (page_idx, layer_idx) = doc.add_page(Mm(0.0), Mm(0.0), "");
+        let layer = doc.get_page(page_idx).get_layer(layer_idx);
+        let mut font = RuntimeFonts::new();
+        let font_id = font.add_builtin_font().unwrap();
+        font.add_font_as_fallback(font_id);
+        let ctx = PdfContext {
+            config: &PdfConfig::default(),
+            layer: &layer,
+            fonts: &font,
+            fallback_font_id: font_id,
+        };
+
+        let text = PdfObjectText {
+            point: PdfPoint::from_coords_f32(0.0, 0.0),
+            text: String::from("hello world"),
+            size: Some(36.0),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            text.bounds(ctx),
+            PdfBounds::from_coords_f32(0.0, -3.810_002_3, 83.820_05, 12.954_007)
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_text_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+        lua.set_app_data({
+            let mut fonts = RuntimeFonts::new();
+            let id = fonts.add_builtin_font().unwrap();
+            fonts.add_font_as_fallback(id);
+            fonts
+        });
+
+        // Test the bounds, which should correctly cover full text
+        lua.load(chunk! {
+            local text = pdf.object.text({
+                x = 0,
+                y = 0,
+                text = "hello world",
+                size = 36.0,
+            })
+            pdf.utils.assert_deep_equal(text:bounds(), {
+                ll = { x = 0,                   y = -3.810002326965332 },
+                ur = { x = 83.82005310058594,   y = 12.954007148742676 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
 }

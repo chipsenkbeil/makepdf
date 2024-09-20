@@ -270,6 +270,10 @@ local PdfObjectGroup = {
     link = nil,
 }
 
+---Calculates the bounds that contains the entire set of objects within the group.
+---@return pdf.common.Bounds
+function PdfObjectGroup:bounds() end
+
 ---@class pdf.object.GroupArgs
 ---@field [number] pdf.Object
 local PdfObjectGroupArgs = {
@@ -303,6 +307,10 @@ local PdfObjectLine = {
     ---@type pdf.common.Link|nil
     link = nil,
 }
+
+---Calculates the bounds that contain all points within the lines.
+---@return pdf.common.Bounds
+function PdfObjectLine:bounds() end
 
 ---@class pdf.object.LineArgs
 ---@field [number] pdf.common.PointArg
@@ -344,6 +352,10 @@ local PdfObjectRect = {
     ---@type pdf.common.Link|nil
     link = nil,
 }
+
+---Returns the bounds of the rect.
+---@return pdf.common.Bounds
+function PdfObjectRect:bounds() end
 
 ---@class pdf.object.RectArgsBase
 local PdfObjectRectArgsBase = {
@@ -408,6 +420,10 @@ local PdfObjectShape = {
     link = nil,
 }
 
+---Calculates the bounds that contain all points within the shape.
+---@return pdf.common.Bounds
+function PdfObjectShape:bounds() end
+
 ---@class pdf.object.ShapeArgs
 ---@field [number] pdf.common.PointArg
 local PdfObjectShapeArgs = {
@@ -456,9 +472,11 @@ local PdfObjectText = {
 }
 
 ---Calculates the bounds of the text object by using its baseline x & y
----coordinates alongside the associated font. The returned bounds represent
----the total size and positioning of the text within the PDF accounting for
----ascenders (e.g. capital letters) and descenders (e.g. letters like 'g').
+---coordinates alongside the associated font.
+---
+---The returned bounds represent the total size and positioning of the text
+---within the PDF accounting for ascenders (e.g. capital letters) and
+---descenders (e.g. letters like 'g').
 ---@return pdf.common.Bounds
 function PdfObjectText:bounds() end
 

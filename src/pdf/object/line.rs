@@ -3,13 +3,14 @@ mod style;
 pub use style::PdfObjectLineStyle;
 
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfPoint,
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+    PdfPoint,
 };
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PdfObjectLine {
     pub points: Vec<PdfPoint>,
     pub depth: Option<i64>,
@@ -23,8 +24,20 @@ pub struct PdfObjectLine {
 impl PdfObjectLine {
     /// Returns bounds for the line(s) by getting the lower and upper point ranges.
     pub fn bounds(&self) -> PdfBounds {
-        let mut ll = PdfPoint::default();
-        let mut ur = PdfPoint::default();
+        // Set default for lower-left and upper-right to our first point, or
+        // default if we have no points. We do this to avoid the issue where
+        // the default point is 0,0 and all existing points are positive, the
+        // bounds would have a lower-left of 0,0.
+        let mut ll = self
+            .points
+            .first()
+            .copied()
+            .unwrap_or_else(PdfPoint::default);
+        let mut ur = self
+            .points
+            .first()
+            .copied()
+            .unwrap_or_else(PdfPoint::default);
 
         for point in self.points.iter() {
             if point.x < ll.x {
@@ -36,7 +49,7 @@ impl PdfObjectLine {
             }
 
             if point.y < ll.y {
-                ll.y = point.x;
+                ll.y = point.y;
             }
 
             if point.y > ur.y {
@@ -94,7 +107,7 @@ impl PdfObjectLine {
 impl<'lua> IntoLua<'lua> for PdfObjectLine {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         // Add the points as a list
         for point in self.points {
@@ -108,6 +121,11 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |_, this: Self| Ok(this.bounds()))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
@@ -132,5 +150,82 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
                 message: None,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::Pdf;
+    use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_line() {
+        // No points
+        let line = PdfObjectLine::default();
+        assert_eq!(
+            line.bounds(),
+            PdfBounds::from_coords_f32(0.0, 0.0, 0.0, 0.0)
+        );
+
+        // Single point
+        let line = PdfObjectLine {
+            points: vec![PdfPoint::from_coords_f32(3.0, 4.0)],
+            ..Default::default()
+        };
+        assert_eq!(
+            line.bounds(),
+            PdfBounds::from_coords_f32(3.0, 4.0, 3.0, 4.0)
+        );
+
+        // Multiple points
+        let line = PdfObjectLine {
+            points: vec![
+                PdfPoint::from_coords_f32(1.0, 5.0),
+                PdfPoint::from_coords_f32(3.0, 4.0),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            line.bounds(),
+            PdfBounds::from_coords_f32(1.0, 4.0, 3.0, 5.0)
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_line_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        lua.load(chunk! {
+            // No points
+            local line = pdf.object.line({})
+            pdf.utils.assert_deep_equal(line:bounds(), {
+                ll = { x = 0, y = 0 },
+                ur = { x = 0, y = 0 },
+            })
+
+            // Single point
+            local line = pdf.object.line({
+                { x = 3, y = 4 },
+            })
+            pdf.utils.assert_deep_equal(line:bounds(), {
+                ll = { x = 3, y = 4 },
+                ur = { x = 3, y = 4 },
+            })
+
+            // Multiple points
+            local line = pdf.object.line({
+                { x = 1, y = 5 },
+                { x = 3, y = 4 },
+            })
+            pdf.utils.assert_deep_equal(line:bounds(), {
+                ll = { x = 1, y = 4 },
+                ur = { x = 3, y = 5 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
     }
 }

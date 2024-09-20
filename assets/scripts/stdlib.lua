@@ -1,4 +1,6 @@
----
----@return pdf.object.Group
-function pdf.object.rect_text()
-end
+-------------------------------------------------------------------------------
+-- STDLIB
+--
+-- Executed prior to the user script, enabling standard library implementations
+-- that are written in Lua. This is designed as faster turnaround than Rust.
+-------------------------------------------------------------------------------
