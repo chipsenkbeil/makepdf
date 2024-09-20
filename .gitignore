@@ -1,4 +1,5 @@
 /target
+.sl/
 *.pdf
 *.lua
 !assets/scripts/*.lua
