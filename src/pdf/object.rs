@@ -45,6 +45,18 @@ impl PdfObject {
         }
     }
 
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
+        Ok(match self {
+            Self::Group(x) => x.lua_bounds(lua)?,
+            Self::Line(x) => x.bounds(),
+            Self::Rect(x) => x.bounds,
+            Self::Shape(x) => x.bounds(),
+            Self::Text(x) => x.lua_bounds(lua)?,
+        })
+    }
+
     /// Returns depth of the object with 0 being the default.
     pub fn depth(&self) -> i64 {
         match self {

@@ -1,6 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfPaintMode,
-    PdfPoint, PdfWindingOrder,
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+    PdfPaintMode, PdfPoint, PdfWindingOrder,
 };
 use mlua::prelude::*;
 use printpdf::Polygon;
@@ -76,7 +76,7 @@ impl PdfObjectShape {
 impl<'lua> IntoLua<'lua> for PdfObjectShape {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         // Add the points as a list
         for point in self.points {
@@ -90,6 +90,11 @@ impl<'lua> IntoLua<'lua> for PdfObjectShape {
         table.raw_set("mode", self.mode)?;
         table.raw_set("order", self.order)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |_, this: Self| Ok(this.bounds()))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
