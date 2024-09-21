@@ -1,6 +1,7 @@
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
-    PdfLuaExt, PdfLuaTableExt, PdfPaintMode, PdfPoint, PdfVerticalAlign, PdfWindingOrder,
+    PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfPaintMode, PdfPoint, PdfVerticalAlign,
+    PdfWindingOrder,
 };
 use mlua::prelude::*;
 use printpdf::Polygon;
@@ -113,6 +114,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectShape {
         }
 
         // Add properties as extra named fields
+        table.raw_set("type", PdfObjectType::Shape)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
