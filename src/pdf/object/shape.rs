@@ -1,6 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
-    PdfPaintMode, PdfPoint, PdfWindingOrder,
+    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
+    PdfLuaExt, PdfLuaTableExt, PdfPaintMode, PdfPoint, PdfVerticalAlign, PdfWindingOrder,
 };
 use mlua::prelude::*;
 use printpdf::Polygon;
@@ -56,6 +56,23 @@ impl PdfObjectShape {
         PdfBounds::new(ll, ur)
     }
 
+    /// Aligns the shape to a set of bounds.
+    pub fn align_to(&mut self, bounds: PdfBounds, align: (PdfVerticalAlign, PdfHorizontalAlign)) {
+        // Get new bounds for series of points
+        let src_bounds = self.bounds();
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out the shift from original to new bounds
+        let x_offset = dst_bounds.ll.x - src_bounds.ll.x;
+        let y_offset = dst_bounds.ll.y - src_bounds.ll.y;
+
+        // Apply the changes to all of the points
+        for point in self.points.iter_mut() {
+            point.x += x_offset;
+            point.y += y_offset;
+        }
+    }
+
     /// Returns a collection of link annotations.
     pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
         match self.link.clone() {
@@ -104,6 +121,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectShape {
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |_, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.align_to(bounds, align.to_v_h());
+                    Ok(this)
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
             "bounds",
             lua.create_function(move |_, this: Self| Ok(this.bounds()))?,
         )?;
@@ -139,6 +166,42 @@ mod tests {
     use super::*;
     use crate::pdf::Pdf;
     use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_align_shape_to_some_bounds_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test the bounds, which should correctly cover full shape
+        lua.load(chunk! {
+            // Create an initial shape at some position
+            local shape = pdf.object.shape({
+                { x = 1, y = 5 },
+                { x = 3, y = 4 },
+            })
+
+            // Assert the shape is where we expect prior to alignment
+            pdf.utils.assert_deep_equal(shape:bounds(), {
+                ll = { x = 1, y = 4 },
+                ur = { x = 3, y = 5 },
+            })
+
+            // Do the alignment with some bounds that are elsewhere
+            shape = shape:align_to({
+                ll = { x = 5,  y = 5 },
+                ur = { x = 10, y = 10 },
+            }, { v = "bottom", h = "left" })
+
+            // Assert the shape has moved into place
+            pdf.utils.assert_deep_equal(shape:bounds(), {
+                ll = { x = 5, y = 5 },
+                ur = { x = 7, y = 6 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_calculate_bounds_of_shape() {

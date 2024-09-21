@@ -1,5 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
+    PdfLuaExt, PdfLuaTableExt, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{
@@ -18,6 +19,11 @@ pub struct PdfObjectRect {
 }
 
 impl PdfObjectRect {
+    /// Aligns the rect to a set of bounds.
+    pub fn align_to(&mut self, bounds: PdfBounds, align: (PdfVerticalAlign, PdfHorizontalAlign)) {
+        self.bounds = self.bounds.align_to(bounds, align);
+    }
+
     /// Returns a collection of link annotations.
     pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
         match self.link.clone() {
@@ -60,6 +66,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |_, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.align_to(bounds, align.to_v_h());
+                    Ok(this)
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
             "bounds",
             lua.create_function(move |_, this: Self| Ok(this.bounds))?,
         )?;
@@ -96,6 +112,42 @@ mod tests {
     use super::*;
     use crate::pdf::Pdf;
     use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_align_rect_to_some_bounds_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test the bounds, which should correctly cover full shape
+        lua.load(chunk! {
+            // Create an initial rect at some position
+            local rect = pdf.object.rect({
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            })
+
+            // Assert the rect is where we expect prior to alignment
+            pdf.utils.assert_deep_equal(rect:bounds(), {
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            })
+
+            // Do the alignment with some bounds that are elsewhere
+            rect = rect:align_to({
+                ll = { x = 5,  y = 5 },
+                ur = { x = 10, y = 10 },
+            }, { v = "bottom", h = "left" })
+
+            // Assert the rect has moved into place
+            pdf.utils.assert_deep_equal(rect:bounds(), {
+                ll = { x = 5, y = 5 },
+                ur = { x = 7, y = 7 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_calculate_bounds_of_rect_in_lua() {

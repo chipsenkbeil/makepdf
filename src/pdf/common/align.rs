@@ -1,4 +1,52 @@
+use crate::pdf::PdfLuaTableExt;
 use mlua::prelude::*;
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct PdfAlign {
+    pub h: PdfHorizontalAlign,
+    pub v: PdfVerticalAlign,
+}
+
+impl PdfAlign {
+    /// Convert to (horizontal, vertical) tuple.
+    pub fn to_h_v(self) -> (PdfHorizontalAlign, PdfVerticalAlign) {
+        (self.h, self.v)
+    }
+
+    /// Convert to (vertical, horizontal) tuple.
+    pub fn to_v_h(self) -> (PdfVerticalAlign, PdfHorizontalAlign) {
+        (self.v, self.h)
+    }
+}
+
+impl<'lua> IntoLua<'lua> for PdfAlign {
+    #[inline]
+    fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
+        let table = lua.create_table()?;
+        table.raw_set("h", self.h)?;
+        table.raw_set("v", self.v)?;
+
+        Ok(LuaValue::Table(table))
+    }
+}
+
+impl<'lua> FromLua<'lua> for PdfAlign {
+    #[inline]
+    fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+        let from = value.type_name();
+        match value {
+            LuaValue::Table(tbl) => Ok(Self {
+                h: tbl.raw_get_ext("h")?,
+                v: tbl.raw_get_ext("v")?,
+            }),
+            _ => Err(LuaError::FromLuaConversionError {
+                from,
+                to: "pdf.common.horizontal_align",
+                message: None,
+            }),
+        }
+    }
+}
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub enum PdfHorizontalAlign {
