@@ -2,19 +2,16 @@ use crate::PdfLuaTableExt;
 use mlua::prelude::*;
 use printpdf::Mm;
 
-pub type Margin = PdfSpace;
-pub type Padding = PdfSpace;
-
-/// Spacing for some object in a PDF.
+/// Padding for some object in a PDF.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct PdfSpace {
+pub struct PdfPadding {
     pub top: Mm,
     pub right: Mm,
     pub bottom: Mm,
     pub left: Mm,
 }
 
-impl PdfSpace {
+impl PdfPadding {
     /// Create a new space instance from the individual params.
     #[inline]
     pub const fn new(top: Mm, right: Mm, bottom: Mm, left: Mm) -> Self {
@@ -69,7 +66,7 @@ impl PdfSpace {
     }
 }
 
-impl<'lua> IntoLua<'lua> for PdfSpace {
+impl<'lua> IntoLua<'lua> for PdfPadding {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let table = lua.create_table()?;
@@ -83,7 +80,7 @@ impl<'lua> IntoLua<'lua> for PdfSpace {
     }
 }
 
-impl<'lua> FromLua<'lua> for PdfSpace {
+impl<'lua> FromLua<'lua> for PdfPadding {
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
         match value {
@@ -138,62 +135,65 @@ mod tests {
     fn should_be_able_to_convert_from_lua() {
         // Can convert integer into space
         assert_eq!(
-            Lua::new().load(chunk!(1)).eval::<PdfSpace>().unwrap(),
-            PdfSpace::new_f32(1.0, 1.0, 1.0, 1.0),
+            Lua::new().load(chunk!(1)).eval::<PdfPadding>().unwrap(),
+            PdfPadding::new_f32(1.0, 1.0, 1.0, 1.0),
         );
 
         // Can convert number into space
         assert_eq!(
-            Lua::new().load(chunk!(1.5)).eval::<PdfSpace>().unwrap(),
-            PdfSpace::new_f32(1.5, 1.5, 1.5, 1.5),
+            Lua::new().load(chunk!(1.5)).eval::<PdfPadding>().unwrap(),
+            PdfPadding::new_f32(1.5, 1.5, 1.5, 1.5),
         );
 
         // Can convert { number } into space
         assert_eq!(
-            Lua::new().load(chunk!({ 1.5 })).eval::<PdfSpace>().unwrap(),
-            PdfSpace::new_f32(1.5, 1.5, 1.5, 1.5),
+            Lua::new()
+                .load(chunk!({ 1.5 }))
+                .eval::<PdfPadding>()
+                .unwrap(),
+            PdfPadding::new_f32(1.5, 1.5, 1.5, 1.5),
         );
 
         // Can convert { number, number } into space
         assert_eq!(
             Lua::new()
                 .load(chunk!({1.5, 2.5}))
-                .eval::<PdfSpace>()
+                .eval::<PdfPadding>()
                 .unwrap(),
-            PdfSpace::new_f32(1.5, 2.5, 1.5, 2.5),
+            PdfPadding::new_f32(1.5, 2.5, 1.5, 2.5),
         );
 
         // Can convert { number, number, number } into space
         assert_eq!(
             Lua::new()
                 .load(chunk!({1.5, 2.5, 3.5}))
-                .eval::<PdfSpace>()
+                .eval::<PdfPadding>()
                 .unwrap(),
-            PdfSpace::new_f32(1.5, 2.5, 3.5, 2.5),
+            PdfPadding::new_f32(1.5, 2.5, 3.5, 2.5),
         );
 
         // Can convert { number, number, number, number } into space
         assert_eq!(
             Lua::new()
                 .load(chunk!({1.5, 2.5, 3.5, 4.5}))
-                .eval::<PdfSpace>()
+                .eval::<PdfPadding>()
                 .unwrap(),
-            PdfSpace::new_f32(1.5, 2.5, 3.5, 4.5),
+            PdfPadding::new_f32(1.5, 2.5, 3.5, 4.5),
         );
 
         // Can convert { top, right, bottom, left } into space
         assert_eq!(
             Lua::new()
                 .load(chunk!({ top = 1.5, right = 2.5, bottom = 3.5, left = 4.5 }))
-                .eval::<PdfSpace>()
+                .eval::<PdfPadding>()
                 .unwrap(),
-            PdfSpace::new_f32(1.5, 2.5, 3.5, 4.5),
+            PdfPadding::new_f32(1.5, 2.5, 3.5, 4.5),
         );
     }
 
     #[test]
     fn should_be_able_to_convert_into_lua() {
-        let space = PdfSpace::new_f32(1.0, 2.0, 3.0, 4.0);
+        let space = PdfPadding::new_f32(1.0, 2.0, 3.0, 4.0);
 
         Lua::new()
             .load(chunk! {
