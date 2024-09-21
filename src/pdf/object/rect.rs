@@ -1,6 +1,6 @@
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
-    PdfLuaExt, PdfLuaTableExt, PdfVerticalAlign,
+    PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{
@@ -60,6 +60,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         let (table, metatable) = lua.create_table_ext()?;
 
         self.bounds.add_to_table(&table)?;
+        table.raw_set("type", PdfObjectType::Rect)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;

@@ -4,7 +4,7 @@ pub use style::PdfObjectLineStyle;
 
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
-    PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
+    PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfPoint, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
@@ -132,6 +132,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         }
 
         // Add properties as extra named fields
+        table.raw_set("type", PdfObjectType::Line)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
