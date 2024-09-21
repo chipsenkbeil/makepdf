@@ -1,8 +1,10 @@
-use crate::pdf::{PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt, PdfObject};
+use crate::pdf::{
+    PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfObject,
+};
 use mlua::prelude::*;
 
 /// Represents a group of objects to be drawn in the PDF.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PdfObjectGroup {
     pub objects: Vec<PdfObject>,
     pub link: Option<PdfLink>,
@@ -12,7 +14,11 @@ impl PdfObjectGroup {
     /// Returns bounds for the group by calculating the bounds of each object within the group and
     /// returning the minimum bounds that will contain all of them.
     pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
-        let mut bounds = PdfBounds::default();
+        let mut bounds = if let Some(obj) = self.objects.first() {
+            obj.bounds(ctx)
+        } else {
+            PdfBounds::default()
+        };
 
         for obj in self.objects.iter() {
             let b = obj.bounds(ctx);
@@ -25,7 +31,7 @@ impl PdfObjectGroup {
             }
 
             if b.ll.y < bounds.ll.y {
-                bounds.ll.y = b.ll.x;
+                bounds.ll.y = b.ll.y;
             }
 
             if b.ur.y > bounds.ur.y {
@@ -34,6 +40,40 @@ impl PdfObjectGroup {
         }
 
         bounds
+    }
+
+    /// Returns bounds for the group by calculating the bounds of each object within the group and
+    /// returning the minimum bounds that will contain all of them.
+    ///
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
+        let mut bounds = if let Some(obj) = self.objects.first() {
+            obj.lua_bounds(lua)?
+        } else {
+            PdfBounds::default()
+        };
+
+        for obj in self.objects.iter() {
+            let b = obj.lua_bounds(lua)?;
+            if b.ll.x < bounds.ll.x {
+                bounds.ll.x = b.ll.x;
+            }
+
+            if b.ur.x > bounds.ur.x {
+                bounds.ur.x = b.ur.x;
+            }
+
+            if b.ll.y < bounds.ll.y {
+                bounds.ll.y = b.ll.y;
+            }
+
+            if b.ur.y > bounds.ur.y {
+                bounds.ur.y = b.ur.y;
+            }
+        }
+
+        Ok(bounds)
     }
 
     /// Returns a collection of link annotations.
@@ -129,13 +169,18 @@ impl FromIterator<PdfObject> for PdfObjectGroup {
 impl<'lua> IntoLua<'lua> for PdfObjectGroup {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         for obj in self.objects {
             table.raw_push(obj)?;
         }
 
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
@@ -155,5 +200,87 @@ impl<'lua> FromLua<'lua> for PdfObjectGroup {
                 message: None,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::{Pdf, PdfConfig, PdfObjectRect, PdfObjectText, PdfPoint};
+    use crate::runtime::RuntimeFonts;
+    use mlua::chunk;
+    use printpdf::{Mm, PdfDocument};
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_group() {
+        // Create a pdf context that we need for bounds calculations
+        let doc = PdfDocument::empty("");
+        let (page_idx, layer_idx) = doc.add_page(Mm(0.0), Mm(0.0), "");
+        let layer = doc.get_page(page_idx).get_layer(layer_idx);
+        let mut font = RuntimeFonts::new();
+        let font_id = font.add_builtin_font().unwrap();
+        font.add_font_as_fallback(font_id);
+        let ctx = PdfContext {
+            config: &PdfConfig::default(),
+            layer: &layer,
+            fonts: &font,
+            fallback_font_id: font_id,
+        };
+
+        // Calculate the bounds of the group
+        let group: PdfObjectGroup = vec![
+            PdfObject::Text(PdfObjectText {
+                point: PdfPoint::from_coords_f32(0.0, 0.0),
+                text: String::from("hello world"),
+                size: Some(36.0),
+                ..Default::default()
+            }),
+            PdfObject::Rect(PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(-1.0, 2.0, 3.0, 15.0),
+                ..Default::default()
+            }),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            group.bounds(ctx),
+            PdfBounds::from_coords_f32(-1.0, -3.810_002_3, 83.820_05, 15.0)
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_group_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+        lua.set_app_data({
+            let mut fonts = RuntimeFonts::new();
+            let id = fonts.add_builtin_font().unwrap();
+            fonts.add_font_as_fallback(id);
+            fonts
+        });
+
+        // Test the bounds, which should correctly cover full group of objects
+        lua.load(chunk! {
+            local group = pdf.object.group({
+                pdf.object.text({
+                    x = 0,
+                    y = 0,
+                    text = "hello world",
+                    size = 36.0,
+                }),
+                pdf.object.rect({
+                    ll = { x = -1, y = 2 },
+                    ur = { x = 3,  y = 15 },
+                })
+            })
+            pdf.utils.assert_deep_equal(group:bounds(), {
+                ll = { x = -1,                  y = -3.810002326965332  },
+                ur = { x = 83.82005310058594,   y = 15                  },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
     }
 }
