@@ -1,5 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
+    PdfLuaExt, PdfLuaTableExt, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{
@@ -18,6 +19,11 @@ pub struct PdfObjectRect {
 }
 
 impl PdfObjectRect {
+    /// Aligns the rect to a set of bounds.
+    pub fn align_to(&mut self, bounds: PdfBounds, align: (PdfVerticalAlign, PdfHorizontalAlign)) {
+        self.bounds = self.bounds.align_to(bounds, align);
+    }
+
     /// Returns a collection of link annotations.
     pub fn link_annotations(&self, _ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
         match self.link.clone() {
@@ -58,6 +64,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |_, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.align_to(bounds, align.to_v_h());
+                    Ok(this)
+                },
+            )?,
+        )?;
 
         metatable.raw_set(
             "bounds",

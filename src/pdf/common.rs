@@ -9,7 +9,7 @@ mod order;
 mod point;
 mod space;
 
-pub use align::{PdfHorizontalAlign, PdfVerticalAlign};
+pub use align::{PdfAlign, PdfHorizontalAlign, PdfVerticalAlign};
 pub use bounds::PdfBounds;
 pub use color::PdfColor;
 pub use date::PdfDate;

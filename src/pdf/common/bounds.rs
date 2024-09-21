@@ -77,12 +77,8 @@ impl PdfBounds {
 
     /// Returns a new bounds aligned to some other bounds based on `halign` and `valign`
     /// configuration.
-    pub fn align_to(
-        &self,
-        other: Self,
-        halign: PdfHorizontalAlign,
-        valign: PdfVerticalAlign,
-    ) -> Self {
+    pub fn align_to(&self, other: Self, align: (PdfVerticalAlign, PdfHorizontalAlign)) -> Self {
+        let (valign, halign) = align;
         let x_offset = match halign {
             PdfHorizontalAlign::Left => other.ll.x - self.ll.x,
             PdfHorizontalAlign::Middle => {
@@ -203,6 +199,9 @@ mod tests {
 
     #[test]
     fn should_support_aligning_with_another_set_of_bounds() {
+        type H = PdfHorizontalAlign;
+        type V = PdfVerticalAlign;
+
         // 5x5 square
         let this = PdfBounds::from_coords_f32(1.0, 1.0, 6.0, 6.0);
 
@@ -210,39 +209,39 @@ mod tests {
         let other = PdfBounds::from_coords_f32(5.0, 5.0, 25.0, 25.0);
 
         // Upper-left
-        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Top);
+        let actual = this.align_to(other, (V::Top, H::Left));
         assert_eq!(actual.to_coords_f32(), (5.0, 20.0, 10.0, 25.0));
 
         // Upper-middle
-        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Top);
+        let actual = this.align_to(other, (V::Top, H::Middle));
         assert_eq!(actual.to_coords_f32(), (12.5, 20.0, 17.5, 25.0));
 
         // Upper-right
-        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Top);
+        let actual = this.align_to(other, (V::Top, H::Right));
         assert_eq!(actual.to_coords_f32(), (20.0, 20.0, 25.0, 25.0));
 
         // Middle-left
-        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Middle);
+        let actual = this.align_to(other, (V::Middle, H::Left));
         assert_eq!(actual.to_coords_f32(), (5.0, 12.5, 10.0, 17.5));
 
         // Middle-middle
-        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Middle);
+        let actual = this.align_to(other, (V::Middle, H::Middle));
         assert_eq!(actual.to_coords_f32(), (12.5, 12.5, 17.5, 17.5));
 
         // Middle-right
-        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Middle);
+        let actual = this.align_to(other, (V::Middle, H::Right));
         assert_eq!(actual.to_coords_f32(), (20.0, 12.5, 25.0, 17.5));
 
         // Bottom-left
-        let actual = this.align_to(other, PdfHorizontalAlign::Left, PdfVerticalAlign::Bottom);
+        let actual = this.align_to(other, (V::Bottom, H::Left));
         assert_eq!(actual.to_coords_f32(), (5.0, 5.0, 10.0, 10.0));
 
         // Bottom-middle
-        let actual = this.align_to(other, PdfHorizontalAlign::Middle, PdfVerticalAlign::Bottom);
+        let actual = this.align_to(other, (V::Bottom, H::Middle));
         assert_eq!(actual.to_coords_f32(), (12.5, 5.0, 17.5, 10.0));
 
         // Bottom-right
-        let actual = this.align_to(other, PdfHorizontalAlign::Right, PdfVerticalAlign::Bottom);
+        let actual = this.align_to(other, (V::Bottom, H::Right));
         assert_eq!(actual.to_coords_f32(), (20.0, 5.0, 25.0, 10.0));
     }
 

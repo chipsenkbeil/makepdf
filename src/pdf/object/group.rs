@@ -1,5 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfObject,
+    PdfAlign, PdfBounds, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation, PdfLuaExt,
+    PdfLuaTableExt, PdfObject, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 
@@ -74,6 +75,56 @@ impl PdfObjectGroup {
         }
 
         Ok(bounds)
+    }
+
+    /// Aligns this group to a set of bounds.
+    pub(crate) fn lua_align_to(
+        &mut self,
+        lua: &Lua,
+        bounds: PdfBounds,
+        align: (PdfVerticalAlign, PdfHorizontalAlign),
+    ) -> LuaResult<()> {
+        // Get new bounds for series of points
+        let src_bounds = self.lua_bounds(lua)?;
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out changes from original bounds of points
+        let x_offset = dst_bounds.width() - src_bounds.width();
+        let y_offset = dst_bounds.height() - src_bounds.height();
+
+        // Apply the changes to all of the points
+        for obj in self.objects.iter_mut() {
+            match obj {
+                PdfObject::Group(obj) => {
+                    obj.lua_align_to(lua, bounds, align)?;
+                }
+                PdfObject::Line(obj) => {
+                    for pt in obj.points.iter_mut() {
+                        pt.x += x_offset;
+                        pt.y += y_offset;
+                    }
+                }
+                PdfObject::Rect(obj) => {
+                    obj.bounds.ll.x += x_offset;
+                    obj.bounds.ur.x += x_offset;
+
+                    obj.bounds.ll.y += y_offset;
+                    obj.bounds.ur.y += y_offset;
+                }
+                PdfObject::Shape(obj) => {
+                    for pt in obj.points.iter_mut() {
+                        pt.x += x_offset;
+                        pt.y += y_offset;
+                    }
+                }
+                PdfObject::Text(obj) => {
+                    obj.point.x += x_offset;
+                    obj.point.y += y_offset;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns a collection of link annotations.
@@ -176,6 +227,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
         }
 
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |lua, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.lua_align_to(lua, bounds, align.to_v_h())?;
+                    Ok(this)
+                },
+            )?,
+        )?;
 
         metatable.raw_set(
             "bounds",

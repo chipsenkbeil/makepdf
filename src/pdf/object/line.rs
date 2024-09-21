@@ -3,8 +3,8 @@ mod style;
 pub use style::PdfObjectLineStyle;
 
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
-    PdfPoint,
+    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
+    PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
@@ -58,6 +58,23 @@ impl PdfObjectLine {
         }
 
         PdfBounds::new(ll, ur)
+    }
+
+    /// Aligns the line to a set of bounds.
+    pub fn align_to(&mut self, bounds: PdfBounds, align: (PdfVerticalAlign, PdfHorizontalAlign)) {
+        // Get new bounds for series of points
+        let src_bounds = self.bounds();
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out changes from original bounds of points
+        let x_offset = dst_bounds.width() - src_bounds.width();
+        let y_offset = dst_bounds.height() - src_bounds.height();
+
+        // Apply the changes to all of the points
+        for point in self.points.iter_mut() {
+            point.x += x_offset;
+            point.y += y_offset;
+        }
     }
 
     /// Returns a collection of link annotations.
@@ -121,6 +138,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |_, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.align_to(bounds, align.to_v_h());
+                    Ok(this)
+                },
+            )?,
+        )?;
 
         metatable.raw_set(
             "bounds",

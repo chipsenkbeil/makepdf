@@ -67,6 +67,9 @@ pdf.planner = {
 ---@alias pdf.common.Point {x:number, y:number}
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
+---@alias pdf.common.Align {h:pdf.common.HorizontalAlign, v:pdf.common.VerticalAlign}
+---@alias pdf.common.HorizontalAlign "left"|"middle"|"right"
+---@alias pdf.common.VerticalAlign "top"|"middle"|"bottom"
 
 ---@alias pdf.common.Link
 ---| {type:"goto", page:integer}
@@ -92,6 +95,12 @@ pdf.planner = {
 ---@field ll pdf.common.Point
 ---@field ur pdf.common.Point
 local PdfBounds = {}
+
+---Aligns these bounds to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+---@return pdf.common.Bounds
+function PdfBounds:align_to(bounds, align) end
 
 ---Calculates the width of the bounds.
 ---@return number
@@ -270,6 +279,11 @@ local PdfObjectGroup = {
     link = nil,
 }
 
+---Aligns the group to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+function PdfObjectGroup:align_to(bounds, align) end
+
 ---Calculates the bounds that contains the entire set of objects within the group.
 ---@return pdf.common.Bounds
 function PdfObjectGroup:bounds() end
@@ -307,6 +321,11 @@ local PdfObjectLine = {
     ---@type pdf.common.Link|nil
     link = nil,
 }
+
+---Aligns the line to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+function PdfObjectLine:align_to(bounds, align) end
 
 ---Calculates the bounds that contain all points within the lines.
 ---@return pdf.common.Bounds
@@ -352,6 +371,11 @@ local PdfObjectRect = {
     ---@type pdf.common.Link|nil
     link = nil,
 }
+
+---Aligns the rect to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+function PdfObjectRect:align_to(bounds, align) end
 
 ---Returns the bounds of the rect.
 ---@return pdf.common.Bounds
@@ -420,6 +444,11 @@ local PdfObjectShape = {
     link = nil,
 }
 
+---Aligns the shape to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+function PdfObjectShape:align_to(bounds, align) end
+
 ---Calculates the bounds that contain all points within the shape.
 ---@return pdf.common.Bounds
 function PdfObjectShape:bounds() end
@@ -470,6 +499,11 @@ local PdfObjectText = {
     ---@type pdf.common.Link|nil
     link = nil,
 }
+
+---Aligns the text to the provided bounds.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+function PdfObjectText:align_to(bounds, align) end
 
 ---Calculates the bounds of the text object by using its baseline x & y
 ---coordinates alongside the associated font.
