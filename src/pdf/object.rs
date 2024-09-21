@@ -3,9 +3,11 @@ mod line;
 mod rect;
 mod shape;
 mod text;
+mod r#type;
 
 pub use group::PdfObjectGroup;
 pub use line::{PdfObjectLine, PdfObjectLineStyle};
+pub use r#type::PdfObjectType;
 pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;
 pub use text::PdfObjectText;
@@ -23,15 +25,20 @@ pub enum PdfObject {
 }
 
 impl PdfObject {
+    /// Returns the type corresponding to the object.
+    pub fn to_type(&self) -> PdfObjectType {
+        match self {
+            Self::Group(_) => PdfObjectType::Group,
+            Self::Line(_) => PdfObjectType::Line,
+            Self::Rect(_) => PdfObjectType::Rect,
+            Self::Shape(_) => PdfObjectType::Shape,
+            Self::Text(_) => PdfObjectType::Text,
+        }
+    }
+
     /// Return a static str representing the type of object.
     pub fn to_type_name(&self) -> &'static str {
-        match self {
-            Self::Group(_) => "group",
-            Self::Line(_) => "line",
-            Self::Rect(_) => "rect",
-            Self::Shape(_) => "shape",
-            Self::Text(_) => "text",
-        }
+        self.to_type().to_type_str()
     }
 
     /// Returns bounds for the object, sometimes calculated using `ctx`.
@@ -136,7 +143,7 @@ impl<'lua> IntoLua<'lua> for PdfObject {
 
         match value {
             LuaValue::Table(table) => {
-                // Inject a type name to mark the type of object
+                // Ensure that the type is reflected on the object
                 table.raw_set("type", ty)?;
 
                 Ok(LuaValue::Table(table))
@@ -155,33 +162,35 @@ impl<'lua> FromLua<'lua> for PdfObject {
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         let from = value.type_name();
         match value {
-            LuaValue::Table(table) => match table.raw_get_ext::<_, String>("type")?.as_str() {
-                "group" => Ok(Self::Group(PdfObjectGroup::from_lua(
-                    LuaValue::Table(table),
-                    lua,
-                )?)),
-                "line" => Ok(Self::Line(PdfObjectLine::from_lua(
-                    LuaValue::Table(table),
-                    lua,
-                )?)),
-                "rect" => Ok(Self::Rect(PdfObjectRect::from_lua(
-                    LuaValue::Table(table),
-                    lua,
-                )?)),
-                "shape" => Ok(Self::Shape(PdfObjectShape::from_lua(
-                    LuaValue::Table(table),
-                    lua,
-                )?)),
-                "text" => Ok(Self::Text(PdfObjectText::from_lua(
-                    LuaValue::Table(table),
-                    lua,
-                )?)),
-                ty => Err(LuaError::FromLuaConversionError {
-                    from,
-                    to: "pdf.object",
-                    message: Some(format!("unknown type: {ty}")),
-                }),
-            },
+            LuaValue::Table(table) => {
+                match table.raw_get_ext::<_, Option<PdfObjectType>>("type")? {
+                    Some(PdfObjectType::Group) => Ok(Self::Group(PdfObjectGroup::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
+                    Some(PdfObjectType::Line) => Ok(Self::Line(PdfObjectLine::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
+                    Some(PdfObjectType::Rect) => Ok(Self::Rect(PdfObjectRect::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
+                    Some(PdfObjectType::Shape) => Ok(Self::Shape(PdfObjectShape::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
+                    Some(PdfObjectType::Text) => Ok(Self::Text(PdfObjectText::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
+                    None => Err(LuaError::FromLuaConversionError {
+                        from,
+                        to: "pdf.object",
+                        message: Some(String::from("unknown type")),
+                    }),
+                }
+            }
             _ => Err(LuaError::FromLuaConversionError {
                 from,
                 to: "pdf.object",
