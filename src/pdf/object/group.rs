@@ -1,5 +1,6 @@
 use crate::pdf::{
-    PdfBounds, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfObject,
+    PdfAlign, PdfBounds, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation, PdfLuaExt,
+    PdfLuaTableExt, PdfObject, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 
@@ -74,6 +75,56 @@ impl PdfObjectGroup {
         }
 
         Ok(bounds)
+    }
+
+    /// Aligns this group to a set of bounds.
+    pub(crate) fn lua_align_to(
+        &mut self,
+        lua: &Lua,
+        bounds: PdfBounds,
+        align: (PdfVerticalAlign, PdfHorizontalAlign),
+    ) -> LuaResult<()> {
+        // Get new bounds for series of points
+        let src_bounds = self.lua_bounds(lua)?;
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out the shift from original to new bounds
+        let x_offset = dst_bounds.ll.x - src_bounds.ll.x;
+        let y_offset = dst_bounds.ll.y - src_bounds.ll.y;
+
+        // Apply the changes to all of the points
+        for obj in self.objects.iter_mut() {
+            match obj {
+                PdfObject::Group(obj) => {
+                    obj.lua_align_to(lua, bounds, align)?;
+                }
+                PdfObject::Line(obj) => {
+                    for pt in obj.points.iter_mut() {
+                        pt.x += x_offset;
+                        pt.y += y_offset;
+                    }
+                }
+                PdfObject::Rect(obj) => {
+                    obj.bounds.ll.x += x_offset;
+                    obj.bounds.ur.x += x_offset;
+
+                    obj.bounds.ll.y += y_offset;
+                    obj.bounds.ur.y += y_offset;
+                }
+                PdfObject::Shape(obj) => {
+                    for pt in obj.points.iter_mut() {
+                        pt.x += x_offset;
+                        pt.y += y_offset;
+                    }
+                }
+                PdfObject::Text(obj) => {
+                    obj.point.x += x_offset;
+                    obj.point.y += y_offset;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns a collection of link annotations.
@@ -178,6 +229,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |lua, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.lua_align_to(lua, bounds, align.to_v_h())?;
+                    Ok(this)
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
             "bounds",
             lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
         )?;
@@ -210,6 +271,55 @@ mod tests {
     use crate::runtime::RuntimeFonts;
     use mlua::chunk;
     use printpdf::{Mm, PdfDocument};
+
+    #[test]
+    fn should_be_able_to_align_group_to_some_bounds_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+        lua.set_app_data({
+            let mut fonts = RuntimeFonts::new();
+            let id = fonts.add_builtin_font().unwrap();
+            fonts.add_font_as_fallback(id);
+            fonts
+        });
+
+        // Test the bounds, which should correctly cover full group of objects
+        lua.load(chunk! {
+            local group = pdf.object.group({
+                pdf.object.text({
+                    x = 0,
+                    y = 0,
+                    text = "hello world",
+                    size = 36.0,
+                }),
+                pdf.object.rect({
+                    ll = { x = -1, y = 2 },
+                    ur = { x = 3,  y = 15 },
+                })
+            })
+
+            // Assert the group is where we expect prior to alignment
+            pdf.utils.assert_deep_equal(group:bounds(), {
+                ll = { x = -1,                  y = -3.810002326965332  },
+                ur = { x = 83.82005310058594,   y = 15                  },
+            })
+
+            // Do the alignment with some bounds that are elsewhere
+            group = group:align_to({
+                ll = { x = 5,  y = 5 },
+                ur = { x = 10, y = 10 },
+            }, { v = "bottom", h = "left" })
+
+            // Assert the group has moved into place
+            pdf.utils.assert_deep_equal(group:bounds(), {
+                ll = { x = 5,                   y = 5 },
+                ur = { x = 89.82005310058594,   y = 23.810001373291016 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_calculate_bounds_of_group() {
