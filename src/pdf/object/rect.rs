@@ -1,4 +1,6 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaTableExt};
+use crate::pdf::{
+    PdfBounds, PdfColor, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt,
+};
 use mlua::prelude::*;
 use printpdf::{
     path::{PaintMode, WindingOrder},
@@ -6,7 +8,7 @@ use printpdf::{
 };
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PdfObjectRect {
     pub bounds: PdfBounds,
     pub depth: Option<i64>,
@@ -49,13 +51,18 @@ impl PdfObjectRect {
 impl<'lua> IntoLua<'lua> for PdfObjectRect {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         self.bounds.add_to_table(&table)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("link", self.link)?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(move |_, this: Self| Ok(this.bounds))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }
@@ -81,5 +88,40 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                 message: None,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pdf::Pdf;
+    use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_calculate_bounds_of_rect_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        lua.load(chunk! {
+            // No bounds specified
+            /*local rect = pdf.object.rect({})
+            pdf.utils.assert_deep_equal(rect:bounds(), {
+                ll = { x = 0, y = 0 },
+                ur = { x = 0, y = 0 },
+            })*/
+
+            // Explicit bounds
+            local rect = pdf.object.rect({
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            })
+            pdf.utils.assert_deep_equal(rect:bounds(), {
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
     }
 }
