@@ -1,7 +1,7 @@
 use crate::constants::GLOBAL_PDF_VAR_NAME;
 use crate::pdf::{
-    PdfBounds, PdfColor, PdfConfig, PdfContext, PdfLink, PdfLinkAnnotation, PdfLuaExt,
-    PdfLuaTableExt, PdfPoint,
+    PdfAlign, PdfBounds, PdfColor, PdfConfig, PdfContext, PdfHorizontalAlign, PdfLink,
+    PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
 };
 use crate::runtime::{RuntimeFontId, RuntimeFonts};
 use mlua::prelude::*;
@@ -53,6 +53,26 @@ impl PdfObjectText {
             }],
             None => Vec::new(),
         }
+    }
+
+    /// Aligns the text to a set of bounds.
+    pub fn align_to(
+        &mut self,
+        ctx: PdfContext,
+        bounds: PdfBounds,
+        align: (PdfVerticalAlign, PdfHorizontalAlign),
+    ) {
+        // Get new bounds for the text
+        let src_bounds = self.bounds(ctx);
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out changes from original bounds of points
+        let x_offset = dst_bounds.width() - src_bounds.width();
+        let y_offset = dst_bounds.height() - src_bounds.height();
+
+        // Apply the changes to the text coordinates
+        self.point.x += x_offset;
+        self.point.y += y_offset;
     }
 
     /// Returns bounds for the text by calculating the width and height and applying to
@@ -111,6 +131,31 @@ impl PdfObjectText {
             Err(LuaError::runtime("Runtime fonts are missing"))
         }
     }
+
+    /// Aligns the text to a set of bounds.
+    ///
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_align_to(
+        &mut self,
+        lua: &Lua,
+        bounds: PdfBounds,
+        align: (PdfVerticalAlign, PdfHorizontalAlign),
+    ) -> LuaResult<()> {
+        // Get new bounds for the text
+        let src_bounds = self.lua_bounds(lua)?;
+        let dst_bounds = src_bounds.align_to(bounds, align);
+
+        // Figure out the shift from original to new bounds
+        let x_offset = dst_bounds.ll.x - src_bounds.ll.x;
+        let y_offset = dst_bounds.ll.y - src_bounds.ll.y;
+
+        // Apply the changes to the text coordinates
+        self.point.x += x_offset;
+        self.point.y += y_offset;
+
+        Ok(())
+    }
 }
 
 fn glyph_metrics(face: &Face, glyph_id: u16) -> Option<GlyphMetrics> {
@@ -141,9 +186,16 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("link", self.link)?;
 
-        // Add specialized methods to calculate the bounds, width, and height of the text
-        // by looking up the global config, grabbing the default font size, and accessing
-        // the repository of fonts to get the information needed for the current text.
+        metatable.raw_set(
+            "align_to",
+            lua.create_function(
+                move |lua, (mut this, bounds, align): (Self, PdfBounds, PdfAlign)| {
+                    this.lua_align_to(lua, bounds, align.to_v_h())?;
+                    Ok(this)
+                },
+            )?,
+        )?;
+
         metatable.raw_set(
             "bounds",
             lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
@@ -255,6 +307,49 @@ mod tests {
     use crate::runtime::RuntimeFonts;
     use mlua::chunk;
     use printpdf::{Mm, PdfDocument};
+
+    #[test]
+    fn should_be_able_to_align_text_to_some_bounds_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+        lua.set_app_data({
+            let mut fonts = RuntimeFonts::new();
+            let id = fonts.add_builtin_font().unwrap();
+            fonts.add_font_as_fallback(id);
+            fonts
+        });
+
+        // Test the bounds, which should correctly cover full text
+        lua.load(chunk! {
+            local text = pdf.object.text({
+                x = 0,
+                y = 0,
+                text = "hello world",
+                size = 36.0,
+            })
+
+            // Assert the text is where we expect prior to alignment
+            pdf.utils.assert_deep_equal(text:bounds(), {
+                ll = { x = 0,                   y = -3.810002326965332 },
+                ur = { x = 83.82005310058594,   y = 12.954007148742676 },
+            })
+
+            // Do the alignment with some bounds that are elsewhere
+            text = text:align_to({
+                ll = { x = 5,  y = 5 },
+                ur = { x = 10, y = 10 },
+            }, { v = "bottom", h = "left" })
+
+            // Assert the text has moved into place
+            pdf.utils.assert_deep_equal(text:bounds(), {
+                ll = { x = 5,                   y = 5 },
+                ur = { x = 88.82005310058594,   y = 21.764009475708008 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_calculate_bounds_of_text() {
