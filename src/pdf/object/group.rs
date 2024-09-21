@@ -1,6 +1,6 @@
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation, PdfLuaExt,
-    PdfLuaTableExt, PdfObject, PdfVerticalAlign,
+    PdfLuaTableExt, PdfObject, PdfObjectType, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 
@@ -226,6 +226,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
             table.raw_push(obj)?;
         }
 
+        table.raw_set("type", PdfObjectType::Group)?;
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(

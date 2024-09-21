@@ -1,7 +1,7 @@
 use crate::constants::GLOBAL_PDF_VAR_NAME;
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfColor, PdfConfig, PdfContext, PdfHorizontalAlign, PdfLink,
-    PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
+    PdfLinkAnnotation, PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfPoint, PdfVerticalAlign,
 };
 use crate::runtime::{RuntimeFontId, RuntimeFonts};
 use mlua::prelude::*;
@@ -178,6 +178,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         let (table, metatable) = lua.create_table_ext()?;
 
         self.point.add_to_table(&table)?;
+        table.raw_set("type", PdfObjectType::Text)?;
         table.raw_set("text", self.text)?;
         table.raw_set("size", self.size)?;
         table.raw_set("depth", self.depth)?;
