@@ -39,7 +39,7 @@ impl Default for PdfConfigPage {
             height: Px(1872).into_pt(dpi).into(),
 
             font_size: 32.0,
-            fill_color: PdfColor::black(),
+            fill_color: PdfColor::grey(),
             outline_color: PdfColor::black(),
             outline_thickness: 1.0,
             line_style: PdfObjectLineStyle::Solid,
