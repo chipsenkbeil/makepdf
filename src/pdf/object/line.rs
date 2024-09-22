@@ -10,7 +10,7 @@ use mlua::prelude::*;
 use printpdf::{Line, LineCapStyle, LineDashPattern};
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectLine {
     pub points: Vec<PdfPoint>,
     pub depth: Option<i64>,
@@ -287,6 +287,149 @@ mod tests {
             pdf.utils.assert_deep_equal(line:bounds(), {
                 ll = { x = 1, y = 4 },
                 ur = { x = 3, y = 5 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        // Can convert from empty table into a line
+        assert_eq!(
+            Lua::new().load(chunk!({})).eval::<PdfObjectLine>().unwrap(),
+            PdfObjectLine::default(),
+        );
+
+        // Can convert from an table with no points (but everything else) into a line
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    depth = 123,
+                    fill_color = "123456",
+                    outline_color = "789ABC",
+                    thickness = 456,
+                    style = "dashed",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectLine>()
+                .unwrap(),
+            PdfObjectLine {
+                points: Vec::new(),
+                depth: Some(123),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                thickness: Some(456.0),
+                style: Some(PdfObjectLineStyle::Dashed),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+
+        // Can convert from a table with only points into a line
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { x = 1, y = 2 },
+                    { x = 3, y = 4 },
+                }))
+                .eval::<PdfObjectLine>()
+                .unwrap(),
+            PdfObjectLine {
+                points: vec![
+                    PdfPoint::from_coords_f32(1.0, 2.0),
+                    PdfPoint::from_coords_f32(3.0, 4.0),
+                ],
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with points and properties into a line
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { x = 1, y = 2 },
+                    { x = 3, y = 4 },
+                    depth = 123,
+                    fill_color = "123456",
+                    outline_color = "789ABC",
+                    thickness = 456,
+                    style = "dashed",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectLine>()
+                .unwrap(),
+            PdfObjectLine {
+                points: vec![
+                    PdfPoint::from_coords_f32(1.0, 2.0),
+                    PdfPoint::from_coords_f32(3.0, 4.0),
+                ],
+                depth: Some(123),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                thickness: Some(456.0),
+                style: Some(PdfObjectLineStyle::Dashed),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test line with nothing
+        let line = PdfObjectLine::default();
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($line, {
+                type = "line",
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+
+        // Test line with everything
+        let line = PdfObjectLine {
+            points: vec![
+                PdfPoint::from_coords_f32(1.0, 2.0),
+                PdfPoint::from_coords_f32(3.0, 4.0),
+            ],
+            depth: Some(123),
+            fill_color: Some("#123456".parse().unwrap()),
+            outline_color: Some("#789ABC".parse().unwrap()),
+            thickness: Some(456.0),
+            style: Some(PdfObjectLineStyle::Dashed),
+            link: Some(PdfLink::Uri {
+                uri: String::from("https://example.com"),
+            }),
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($line, {
+                { x = 1, y = 2 },
+                { x = 3, y = 4 },
+                type = "line",
+                depth = 123,
+                fill_color = "123456",
+                outline_color = "789ABC",
+                thickness = 456,
+                style = "dashed",
+                link = {
+                    type = "uri",
+                    uri = "https://example.com",
+                },
             })
         })
         .exec()

@@ -5,6 +5,18 @@ use printpdf::path::WindingOrder;
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct PdfWindingOrder(WindingOrder);
 
+impl PdfWindingOrder {
+    #[inline]
+    pub const fn even_odd() -> Self {
+        Self(WindingOrder::EvenOdd)
+    }
+
+    #[inline]
+    pub const fn non_zero() -> Self {
+        Self(WindingOrder::NonZero)
+    }
+}
+
 impl From<PdfWindingOrder> for WindingOrder {
     fn from(order: PdfWindingOrder) -> Self {
         order.0
@@ -28,8 +40,8 @@ impl<'lua> FromLua<'lua> for PdfWindingOrder {
         let from = value.type_name();
         match value {
             LuaValue::String(s) => match s.to_string_lossy().as_ref() {
-                "even_odd" => Ok(Self(WindingOrder::EvenOdd)),
-                "non_zero" => Ok(Self(WindingOrder::NonZero)),
+                "even_odd" => Ok(Self::even_odd()),
+                "non_zero" => Ok(Self::non_zero()),
                 ty => Err(LuaError::FromLuaConversionError {
                     from,
                     to: "pdf.common.winding_order",

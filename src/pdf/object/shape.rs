@@ -7,7 +7,7 @@ use mlua::prelude::*;
 use printpdf::Polygon;
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectShape {
     pub points: Vec<PdfPoint>,
     pub depth: Option<i64>,
@@ -269,6 +269,152 @@ mod tests {
             pdf.utils.assert_deep_equal(shape:bounds(), {
                 ll = { x = 1, y = 4 },
                 ur = { x = 3, y = 5 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        // Can convert from empty table into a shape
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({}))
+                .eval::<PdfObjectShape>()
+                .unwrap(),
+            PdfObjectShape::default(),
+        );
+
+        // Can convert from an table with no points (but everything else) into a shape
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    depth = 123,
+                    fill_color = "123456",
+                    outline_color = "789abc",
+                    mode = "stroke",
+                    order = "non_zero",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectShape>()
+                .unwrap(),
+            PdfObjectShape {
+                points: Vec::new(),
+                depth: Some(123),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                mode: Some(PdfPaintMode::stroke()),
+                order: Some(PdfWindingOrder::non_zero()),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+
+        // Can convert from a table with only points into a shape
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { x = 1, y = 2 },
+                    { x = 3, y = 4 },
+                }))
+                .eval::<PdfObjectShape>()
+                .unwrap(),
+            PdfObjectShape {
+                points: vec![
+                    PdfPoint::from_coords_f32(1.0, 2.0),
+                    PdfPoint::from_coords_f32(3.0, 4.0),
+                ],
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with points and properties into a shape
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { x = 1, y = 2 },
+                    { x = 3, y = 4 },
+                    depth = 123,
+                    fill_color = "123456",
+                    outline_color = "789ABC",
+                    mode = "stroke",
+                    order = "non_zero",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectShape>()
+                .unwrap(),
+            PdfObjectShape {
+                points: vec![
+                    PdfPoint::from_coords_f32(1.0, 2.0),
+                    PdfPoint::from_coords_f32(3.0, 4.0),
+                ],
+                depth: Some(123),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                mode: Some(PdfPaintMode::stroke()),
+                order: Some(PdfWindingOrder::non_zero()),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test shape with nothing
+        let shape = PdfObjectShape::default();
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($shape, {
+                type = "shape",
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+
+        // Test shape with everything
+        let shape = PdfObjectShape {
+            points: vec![
+                PdfPoint::from_coords_f32(1.0, 2.0),
+                PdfPoint::from_coords_f32(3.0, 4.0),
+            ],
+            depth: Some(123),
+            fill_color: Some("#123456".parse().unwrap()),
+            outline_color: Some("#789ABC".parse().unwrap()),
+            mode: Some(PdfPaintMode::stroke()),
+            order: Some(PdfWindingOrder::non_zero()),
+            link: Some(PdfLink::Uri {
+                uri: String::from("https://example.com"),
+            }),
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($shape, {
+                { x = 1, y = 2 },
+                { x = 3, y = 4 },
+                type = "shape",
+                depth = 123,
+                fill_color = "123456",
+                outline_color = "789ABC",
+                mode = "stroke",
+                order = "non_zero",
+                link = {
+                    type = "uri",
+                    uri = "https://example.com",
+                },
             })
         })
         .exec()

@@ -9,7 +9,7 @@ use printpdf::{
 };
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectRect {
     pub bounds: PdfBounds,
     pub depth: Option<i64>,
@@ -90,7 +90,13 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => {
-                let bounds = PdfBounds::from_lua(LuaValue::Table(table.clone()), lua)?;
+                // Support missing bounds converting into default bounds
+                //
+                // TODO: This will result in invalid bounds becoming default bounds.
+                //       We want to correct this to support missing bounds only.
+                let bounds =
+                    PdfBounds::from_lua(LuaValue::Table(table.clone()), lua).unwrap_or_default();
+
                 Ok(Self {
                     bounds,
                     depth: table.raw_get_ext("depth")?,
@@ -158,11 +164,11 @@ mod tests {
 
         lua.load(chunk! {
             // No bounds specified
-            /*local rect = pdf.object.rect({})
+            local rect = pdf.object.rect({})
             pdf.utils.assert_deep_equal(rect:bounds(), {
                 ll = { x = 0, y = 0 },
                 ur = { x = 0, y = 0 },
-            })*/
+            })
 
             // Explicit bounds
             local rect = pdf.object.rect({
@@ -172,6 +178,126 @@ mod tests {
             pdf.utils.assert_deep_equal(rect:bounds(), {
                 ll = { x = 1, y = 2 },
                 ur = { x = 3, y = 4 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        // Can convert from empty table into a rect
+        assert_eq!(
+            Lua::new().load(chunk!({})).eval::<PdfObjectRect>().unwrap(),
+            PdfObjectRect::default(),
+        );
+
+        // Can convert from a table with flattened bounds into a rect
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({1, 2, 3, 4}))
+                .eval::<PdfObjectRect>()
+                .unwrap(),
+            PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0),
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with flattened points into a rect
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({{1, 2}, {3, 4}}))
+                .eval::<PdfObjectRect>()
+                .unwrap(),
+            PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0),
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with simplified points into a rect
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ ll = { 1, 2 }, ur = { 3, 4 } }))
+                .eval::<PdfObjectRect>()
+                .unwrap(),
+            PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0),
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with everything into a rect
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    ll = { x = 1, y = 2 },
+                    ur = { x = 3, y = 4 },
+                    depth = 123,
+                    fill_color = "123456",
+                    outline_color = "789ABC",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectRect>()
+                .unwrap(),
+            PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0),
+                depth: Some(123),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test rect with nothing
+        let rect = PdfObjectRect::default();
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($rect, {
+                type = "rect",
+                ll = { x = 0, y = 0 },
+                ur = { x = 0, y = 0 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+
+        // Test rect with everything
+        let rect = PdfObjectRect {
+            bounds: PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0),
+            depth: Some(123),
+            fill_color: Some("#123456".parse().unwrap()),
+            outline_color: Some("#789ABC".parse().unwrap()),
+            link: Some(PdfLink::Uri {
+                uri: String::from("https://example.com"),
+            }),
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($rect, {
+                type = "rect",
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+                depth = 123,
+                fill_color = "123456",
+                outline_color = "789ABC",
+                link = {
+                    type = "uri",
+                    uri = "https://example.com",
+                },
             })
         })
         .exec()
