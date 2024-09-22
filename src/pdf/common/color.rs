@@ -26,6 +26,13 @@ impl PdfColor {
         Self::from_rgb_f32(0.0, 0.0, 0.0)
     }
 
+    /// Produces a traditional grey color.
+    #[inline]
+    pub const fn grey() -> Self {
+        let c = 0.313_725_5; // == 80 / 255
+        Self::from_rgb_f32(c, c, c)
+    }
+
     /// Produces a traditional blue color.
     #[inline]
     pub const fn blue() -> Self {
