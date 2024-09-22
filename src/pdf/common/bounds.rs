@@ -135,11 +135,12 @@ impl<'lua> FromLua<'lua> for PdfBounds {
     /// Converts from any of
     ///
     /// - `{ll:{x:number, y:number}, ur:{x:number, y:number}}`
-    /// - `{llx:number, lly:number, urx:number, ury:number}`
+    /// - `{ll:{number, number}, ur:{number, number}}`
     /// - `{{number, number}, {number, number}}`
     /// - `{number, number, number, number}`
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+        let from = value.type_name();
         match value {
             LuaValue::Table(table) => {
                 let maybe_coords: Option<Vec<f32>> = table
@@ -175,14 +176,15 @@ impl<'lua> FromLua<'lua> for PdfBounds {
                     return Ok(Self::new(ll, ur));
                 }
 
-                // Otherwise, try to get coordinate fields and use them as bounds
-                Ok(Self::new(
-                    PdfPoint::new(Mm(table.raw_get_ext("llx")?), Mm(table.raw_get_ext("lly")?)),
-                    PdfPoint::new(Mm(table.raw_get_ext("urx")?), Mm(table.raw_get_ext("ury")?)),
-                ))
+                // Otherwise, this table is not valid bounds
+                Err(LuaError::FromLuaConversionError {
+                    from,
+                    to: "pdf.common.bounds",
+                    message: Some(String::from("table is not bounds like")),
+                })
             }
             _ => Err(LuaError::FromLuaConversionError {
-                from: value.type_name(),
+                from,
                 to: "pdf.common.bounds",
                 message: None,
             }),
@@ -266,10 +268,10 @@ mod tests {
             bounds,
         );
 
-        // Can convert { llx, lly,  urx, ury } into bounds
+        // Can convert { ll = { number, number }, ur = { number, number } } into bounds
         assert_eq!(
             Lua::new()
-                .load(chunk!({ llx = 1, lly = 2, urx = 3, ury = 4 }))
+                .load(chunk!({ ll = { 1,  2 }, ur = { 3,  4 } }))
                 .eval::<PdfBounds>()
                 .unwrap(),
             bounds,

@@ -11,7 +11,7 @@ pub struct PdfLinkAnnotation {
 }
 
 /// Represents an action to take as a link.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PdfLink {
     /// Link should go to an internal page denoted by the page's id.
     GoTo { page: u32 },

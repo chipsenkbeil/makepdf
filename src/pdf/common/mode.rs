@@ -5,6 +5,28 @@ use printpdf::path::PaintMode;
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct PdfPaintMode(PaintMode);
 
+impl PdfPaintMode {
+    #[inline]
+    pub const fn clip() -> Self {
+        Self(PaintMode::Clip)
+    }
+
+    #[inline]
+    pub const fn fill() -> Self {
+        Self(PaintMode::Fill)
+    }
+
+    #[inline]
+    pub const fn fill_stroke() -> Self {
+        Self(PaintMode::FillStroke)
+    }
+
+    #[inline]
+    pub const fn stroke() -> Self {
+        Self(PaintMode::Stroke)
+    }
+}
+
 impl From<PdfPaintMode> for PaintMode {
     fn from(mode: PdfPaintMode) -> Self {
         mode.0
@@ -30,10 +52,10 @@ impl<'lua> FromLua<'lua> for PdfPaintMode {
         let from = value.type_name();
         match value {
             LuaValue::String(s) => match s.to_string_lossy().as_ref() {
-                "clip" => Ok(Self(PaintMode::Clip)),
-                "fill" => Ok(Self(PaintMode::Fill)),
-                "fill_stroke" => Ok(Self(PaintMode::FillStroke)),
-                "stroke" => Ok(Self(PaintMode::Stroke)),
+                "clip" => Ok(Self::clip()),
+                "fill" => Ok(Self::fill()),
+                "fill_stroke" => Ok(Self::fill_stroke()),
+                "stroke" => Ok(Self::stroke()),
                 ty => Err(LuaError::FromLuaConversionError {
                     from,
                     to: "pdf.common.paint_mode",

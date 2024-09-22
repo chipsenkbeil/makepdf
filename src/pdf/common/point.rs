@@ -71,23 +71,30 @@ impl<'lua> FromLua<'lua> for PdfPoint {
     /// - `{number, number}`
     #[inline]
     fn from_lua(value: LuaValue<'lua>, _lua: &'lua Lua) -> LuaResult<Self> {
+        let from = value.type_name();
         match value {
             LuaValue::Table(table) => {
                 let coords: Vec<f32> = table.clone().sequence_values().collect::<LuaResult<_>>()?;
 
-                Ok(Self {
-                    x: Mm(coords
-                        .first()
-                        .copied()
-                        .map_or_else(|| table.raw_get_ext("x"), Ok)?),
-                    y: Mm(coords
-                        .get(1)
-                        .copied()
-                        .map_or_else(|| table.raw_get_ext("y"), Ok)?),
+                // If we have coordinates, make sure there are two, and use them as point
+                if coords.len() >= 2 {
+                    return Ok(Self::from_coords_f32(coords[0], coords[1]));
+                }
+
+                // If we have point fields, use them as a point
+                if let (Ok(x), Ok(y)) = (table.raw_get_ext("x"), table.raw_get_ext("y")) {
+                    return Ok(Self::from_coords_f32(x, y));
+                }
+
+                // Otherwise, this table is not valid point
+                Err(LuaError::FromLuaConversionError {
+                    from,
+                    to: "pdf.common.point",
+                    message: Some(String::from("table is not point like")),
                 })
             }
             _ => Err(LuaError::FromLuaConversionError {
-                from: value.type_name(),
+                from,
                 to: "pdf.common.point",
                 message: None,
             }),

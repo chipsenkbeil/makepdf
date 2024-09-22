@@ -5,7 +5,7 @@ use crate::pdf::{
 use mlua::prelude::*;
 
 /// Represents a group of objects to be drawn in the PDF.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectGroup {
     pub objects: Vec<PdfObject>,
     pub link: Option<PdfLink>,
@@ -389,6 +389,117 @@ mod tests {
             pdf.utils.assert_deep_equal(group:bounds(), {
                 ll = { x = -1,                  y = -3.810002326965332  },
                 ur = { x = 83.82005310058594,   y = 15                  },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        // Can convert from empty table into a group
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({}))
+                .eval::<PdfObjectGroup>()
+                .unwrap(),
+            PdfObjectGroup::default(),
+        );
+
+        // Can convert from an table with just a link into a group
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ link = { type = "uri", uri = "https://example.com" } }))
+                .eval::<PdfObjectGroup>()
+                .unwrap(),
+            PdfObjectGroup {
+                objects: Vec::new(),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com")
+                })
+            },
+        );
+
+        // Can convert from a table of objects into a group
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { type = "rect" },
+                    { type = "text" },
+                }))
+                .eval::<PdfObjectGroup>()
+                .unwrap(),
+            PdfObjectGroup {
+                objects: vec![
+                    PdfObjectRect::default().into(),
+                    PdfObjectText::default().into(),
+                ],
+                link: None,
+            },
+        );
+
+        // Can convert from a table of objects and a link into a group
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    { type = "rect" },
+                    { type = "text" },
+                    link = { type = "uri", uri = "https://example.com" },
+                }))
+                .eval::<PdfObjectGroup>()
+                .unwrap(),
+            PdfObjectGroup {
+                objects: vec![
+                    PdfObjectRect::default().into(),
+                    PdfObjectText::default().into(),
+                ],
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com")
+                })
+            },
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test group with nothing
+        let group = PdfObjectGroup {
+            objects: vec![],
+            link: None,
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($group, {
+                type = "group",
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+
+        // Test group with everything
+        let group = PdfObjectGroup {
+            objects: vec![
+                PdfObjectRect::default().into(),
+                PdfObjectText::default().into(),
+            ],
+            link: Some(PdfLink::Uri {
+                uri: String::from("https://example.com"),
+            }),
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($group, {
+                type = "group",
+                { type = "rect", ll = { x = 0, y = 0 }, ur = { x = 0, y = 0 } },
+                { type = "text", text = "", x = 0, y = 0 },
+                link = {
+                    type = "uri",
+                    uri = "https://example.com",
+                },
             })
         })
         .exec()

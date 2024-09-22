@@ -15,7 +15,7 @@ pub use text::PdfObjectText;
 use crate::pdf::{PdfBounds, PdfContext, PdfLinkAnnotation, PdfLuaTableExt};
 use mlua::prelude::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PdfObject {
     Group(PdfObjectGroup),
     Line(PdfObjectLine),
