@@ -9,7 +9,7 @@ use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
 
 /// Represents a line to be drawn in the PDF.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectText {
     pub point: PdfPoint,
     pub text: String,
@@ -211,22 +211,27 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
     fn from_lua(value: LuaValue<'lua>, lua: &'lua Lua) -> LuaResult<Self> {
         match value {
             LuaValue::Table(table) => {
-                let maybe_points: Option<Vec<PdfPoint>> = table
-                    .clone()
-                    .sequence_values()
-                    .collect::<LuaResult<_>>()
-                    .ok();
-
-                // Check if the first argument in sequence is a point, otherwise
-                // we assume that the point was flattened into the object
-                let point = match maybe_points.and_then(|p| p.into_iter().next()) {
-                    Some(p) => p,
-                    None => PdfPoint::from_lua(LuaValue::Table(table.clone()), lua)?,
+                // Support missing point converting into default point
+                //
+                // TODO: This will result in invalid point becoming default point.
+                //       We want to correct this to support missing point only.
+                let point = match PdfPoint::from_lua(LuaValue::Table(table.clone()), lua) {
+                    Ok(pt) => pt,
+                    Err(_) => table
+                        .clone()
+                        .sequence_values::<PdfPoint>()
+                        .next()
+                        .transpose()
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default(),
                 };
 
                 Ok(Self {
                     point,
-                    text: table.raw_get_ext("text")?,
+                    text: table
+                        .raw_get_ext::<_, Option<_>>("text")?
+                        .unwrap_or_default(),
                     size: table.raw_get_ext("size")?,
                     depth: table.raw_get_ext("depth")?,
                     font: table.raw_get_ext("font")?,
@@ -404,6 +409,127 @@ mod tests {
             pdf.utils.assert_deep_equal(text:bounds(), {
                 ll = { x = 0,                   y = -3.810002326965332 },
                 ur = { x = 83.82005310058594,   y = 12.954007148742676 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_convert_from_lua() {
+        // Can convert from empty table into a text
+        assert_eq!(
+            Lua::new().load(chunk!({})).eval::<PdfObjectText>().unwrap(),
+            PdfObjectText::default(),
+        );
+
+        // Can convert from a table with flattened point into text
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ 1, 2 }))
+                .eval::<PdfObjectText>()
+                .unwrap(),
+            PdfObjectText {
+                point: PdfPoint::from_coords_f32(1.0, 2.0),
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with simplified point into text
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ { 1, 2 } }))
+                .eval::<PdfObjectText>()
+                .unwrap(),
+            PdfObjectText {
+                point: PdfPoint::from_coords_f32(1.0, 2.0),
+                ..Default::default()
+            },
+        );
+
+        // Can convert from a table with everything into a text
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({
+                    text = "hello world",
+                    x = 1,
+                    y = 2,
+                    depth = 123,
+                    font = 456,
+                    size = 789,
+                    fill_color = "123456",
+                    outline_color = "789ABC",
+                    link = {
+                        type = "uri",
+                        uri = "https://example.com",
+                    },
+                }))
+                .eval::<PdfObjectText>()
+                .unwrap(),
+            PdfObjectText {
+                point: PdfPoint::from_coords_f32(1.0, 2.0),
+                text: String::from("hello world"),
+                depth: Some(123),
+                font: Some(456),
+                size: Some(789.0),
+                fill_color: Some("#123456".parse().unwrap()),
+                outline_color: Some("#789ABC".parse().unwrap()),
+                link: Some(PdfLink::Uri {
+                    uri: String::from("https://example.com"),
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_convert_into_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        // Test text with nothing
+        let text = PdfObjectText::default();
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($text, {
+                type = "text",
+                text = "",
+                x = 0,
+                y = 0,
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+
+        // Test text with everything
+        let text = PdfObjectText {
+            point: PdfPoint::from_coords_f32(1.0, 2.0),
+            text: String::from("hello world"),
+            depth: Some(123),
+            font: Some(456),
+            size: Some(789.0),
+            fill_color: Some("#123456".parse().unwrap()),
+            outline_color: Some("#789ABC".parse().unwrap()),
+            link: Some(PdfLink::Uri {
+                uri: String::from("https://example.com"),
+            }),
+        };
+
+        lua.load(chunk! {
+            pdf.utils.assert_deep_equal($text, {
+                type = "text",
+                text = "hello world",
+                x = 1,
+                y = 2,
+                depth = 123,
+                font = 456,
+                size = 789,
+                fill_color = "123456",
+                outline_color = "789ABC",
+                link = {
+                    type = "uri",
+                    uri = "https://example.com",
+                },
             })
         })
         .exec()
