@@ -29,6 +29,40 @@ impl PdfDate {
         self.0.weekday().into()
     }
 
+    /// Returns how many weeks are contained within the month, meaning
+    /// how many distinct calendar weeks does the month span when the
+    /// beginning of a week is considered Sunday.
+    pub fn weeks_in_month_sunday(self) -> u8 {
+        let mut date = self.into_beginning_of_month();
+        let month = self.month0();
+        let mut cnt = 0;
+
+        // Advance to beginning of next week (Sunday) until we hit the next month
+        while date.month0() == month {
+            cnt += 1;
+            date = date.next_week().unwrap().into_beginning_of_week_sunday();
+        }
+
+        cnt
+    }
+
+    /// Returns how many weeks are contained within the month, meaning
+    /// how many distinct calendar weeks does the month span when the
+    /// beginning of a week is considered Monday.
+    pub fn weeks_in_month_monday(self) -> u8 {
+        let mut date = self.into_beginning_of_month();
+        let month = self.month0();
+        let mut cnt = 0;
+
+        // Advance to beginning of next week (Monday) until we hit the next month
+        while date.month0() == month {
+            cnt += 1;
+            date = date.next_week().unwrap().into_beginning_of_week_monday();
+        }
+
+        cnt
+    }
+
     /// Creates a new date for beginning of `year`. Returns None if invalid.
     pub fn beginning_of_year(year: i32) -> Option<Self> {
         NaiveDate::from_ymd_opt(year, 1, 1).map(PdfDate)
@@ -339,6 +373,16 @@ impl<'lua> IntoLua<'lua> for PdfDate {
         metatable.raw_set(
             "end_of_week_monday",
             lua.create_function(move |_, ()| Ok(self.into_end_of_week_monday()))?,
+        )?;
+
+        metatable.raw_set(
+            "weeks_in_month_sunday",
+            lua.create_function(move |_, ()| Ok(self.weeks_in_month_sunday()))?,
+        )?;
+
+        metatable.raw_set(
+            "weeks_in_month_monday",
+            lua.create_function(move |_, ()| Ok(self.weeks_in_month_monday()))?,
         )?;
 
         metatable.raw_set(
@@ -1185,6 +1229,72 @@ mod tests {
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 6).unwrap()),
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_get_weeks_in_month_sunday_in_lua() {
+        // From a month that covers 4 calendar weeks (Feb, 2015)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2015, 2, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_sunday()))
+                .eval::<u8>()
+                .unwrap(),
+            4
+        );
+
+        // From a month that covers 5 calendar weeks (Mar, 2015)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2015, 3, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_sunday()))
+                .eval::<u8>()
+                .unwrap(),
+            5
+        );
+
+        // From a month that covers 6 calendar weeks (Oct, 2021)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2021, 10, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_sunday()))
+                .eval::<u8>()
+                .unwrap(),
+            6
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_get_weeks_in_month_monday_in_lua() {
+        // From a month that covers 4 calendar weeks (Feb, 2021)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2021, 2, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_monday()))
+                .eval::<u8>()
+                .unwrap(),
+            4
+        );
+
+        // From a month that covers 5 calendar weeks (Mar, 2021)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2021, 3, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_monday()))
+                .eval::<u8>()
+                .unwrap(),
+            5
+        );
+
+        // From a month that covers 6 calendar weeks (May, 2021)
+        let date = PdfDate(NaiveDate::from_ymd_opt(2021, 5, 10).unwrap());
+        assert_eq!(
+            Lua::new()
+                .load(chunk!($date.weeks_in_month_monday()))
+                .eval::<u8>()
+                .unwrap(),
+            6
         );
     }
 

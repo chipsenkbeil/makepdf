@@ -214,6 +214,14 @@ function PdfDate.beginning_of_week_monday() end
 ---@return pdf.common.Date|nil
 function PdfDate.end_of_week_monday() end
 
+---Returns total calendar weeks the month of the date spans where beginning of week starts on Sunday.
+---@return integer
+function PdfDate.weeks_in_month_sunday() end
+
+---Returns total calendar weeks the month of the date spans where beginning of week starts on Monday.
+---@return integer
+function PdfDate.weeks_in_month_monday() end
+
 ---@class pdf.common.DateWeekday
 local PdfDateWeekday = {}
 
