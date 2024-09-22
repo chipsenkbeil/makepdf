@@ -14,8 +14,7 @@ use printpdf::{Line, LineCapStyle, LineDashPattern};
 pub struct PdfObjectLine {
     pub points: Vec<PdfPoint>,
     pub depth: Option<i64>,
-    pub fill_color: Option<PdfColor>,
-    pub outline_color: Option<PdfColor>,
+    pub color: Option<PdfColor>,
     pub thickness: Option<f32>,
     pub style: Option<PdfObjectLineStyle>,
     pub link: Option<PdfLink>,
@@ -92,13 +91,11 @@ impl PdfObjectLine {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         // Get optional values, setting defaults when not specified
-        let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
-        let outline_color = self.fill_color.unwrap_or(ctx.config.page.outline_color);
+        let outline_color = self.color.unwrap_or(ctx.config.page.outline_color);
         let thickness = self.thickness.unwrap_or(ctx.config.page.outline_thickness);
         let style = self.style.unwrap_or(ctx.config.page.line_style);
 
         // Set the color and thickness of our line
-        ctx.layer.set_fill_color(fill_color.into());
         ctx.layer.set_outline_color(outline_color.into());
         ctx.layer.set_outline_thickness(thickness);
 
@@ -134,8 +131,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         // Add properties as extra named fields
         table.raw_set("type", PdfObjectType::Line)?;
         table.raw_set("depth", self.depth)?;
-        table.raw_set("fill_color", self.fill_color)?;
-        table.raw_set("outline_color", self.outline_color)?;
+        table.raw_set("color", self.color)?;
         table.raw_set("thickness", self.thickness)?;
         table.raw_set("style", self.style)?;
         table.raw_set("link", self.link)?;
@@ -166,8 +162,7 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
             LuaValue::Table(table) => Ok(Self {
                 points: table.clone().sequence_values().collect::<LuaResult<_>>()?,
                 depth: table.raw_get_ext("depth")?,
-                fill_color: table.raw_get_ext("fill_color")?,
-                outline_color: table.raw_get_ext("outline_color")?,
+                color: table.raw_get_ext("color")?,
                 thickness: table.raw_get_ext("thickness")?,
                 style: table.raw_get_ext("style")?,
                 link: table.raw_get_ext("link")?,
@@ -306,8 +301,7 @@ mod tests {
             Lua::new()
                 .load(chunk!({
                     depth = 123,
-                    fill_color = "123456",
-                    outline_color = "789ABC",
+                    color = "123456",
                     thickness = 456,
                     style = "dashed",
                     link = {
@@ -320,8 +314,7 @@ mod tests {
             PdfObjectLine {
                 points: Vec::new(),
                 depth: Some(123),
-                fill_color: Some("#123456".parse().unwrap()),
-                outline_color: Some("#789ABC".parse().unwrap()),
+                color: Some("#123456".parse().unwrap()),
                 thickness: Some(456.0),
                 style: Some(PdfObjectLineStyle::Dashed),
                 link: Some(PdfLink::Uri {
@@ -355,8 +348,7 @@ mod tests {
                     { x = 1, y = 2 },
                     { x = 3, y = 4 },
                     depth = 123,
-                    fill_color = "123456",
-                    outline_color = "789ABC",
+                    color = "123456",
                     thickness = 456,
                     style = "dashed",
                     link = {
@@ -372,8 +364,7 @@ mod tests {
                     PdfPoint::from_coords_f32(3.0, 4.0),
                 ],
                 depth: Some(123),
-                fill_color: Some("#123456".parse().unwrap()),
-                outline_color: Some("#789ABC".parse().unwrap()),
+                color: Some("#123456".parse().unwrap()),
                 thickness: Some(456.0),
                 style: Some(PdfObjectLineStyle::Dashed),
                 link: Some(PdfLink::Uri {
@@ -407,8 +398,7 @@ mod tests {
                 PdfPoint::from_coords_f32(3.0, 4.0),
             ],
             depth: Some(123),
-            fill_color: Some("#123456".parse().unwrap()),
-            outline_color: Some("#789ABC".parse().unwrap()),
+            color: Some("#123456".parse().unwrap()),
             thickness: Some(456.0),
             style: Some(PdfObjectLineStyle::Dashed),
             link: Some(PdfLink::Uri {
@@ -422,8 +412,7 @@ mod tests {
                 { x = 3, y = 4 },
                 type = "line",
                 depth = 123,
-                fill_color = "123456",
-                outline_color = "789ABC",
+                color = "123456",
                 thickness = 456,
                 style = "dashed",
                 link = {

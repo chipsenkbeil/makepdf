@@ -16,8 +16,7 @@ pub struct PdfObjectText {
     pub depth: Option<i64>,
     pub font: Option<RuntimeFontId>,
     pub size: Option<f32>,
-    pub fill_color: Option<PdfColor>,
-    pub outline_color: Option<PdfColor>,
+    pub color: Option<PdfColor>,
     pub link: Option<PdfLink>,
 }
 
@@ -26,8 +25,7 @@ impl PdfObjectText {
     pub fn draw(&self, ctx: PdfContext) {
         // Get optional values, setting defaults when not specified
         let size = self.size.unwrap_or(ctx.config.page.font_size);
-        let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
-        let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
+        let fill_color = self.color.unwrap_or(ctx.config.page.fill_color);
         let (x, y) = self.point.to_coords();
 
         // Retrieve the font to use for the text, leveraging the configured font first, otherwise
@@ -38,7 +36,6 @@ impl PdfObjectText {
             .or_else(|| ctx.fonts.get_font_doc_ref(ctx.fallback_font_id))
         {
             ctx.layer.set_fill_color(fill_color.into());
-            ctx.layer.set_outline_color(outline_color.into());
             ctx.layer.use_text(&self.text, size, x, y, font_ref);
         }
     }
@@ -183,8 +180,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectText {
         table.raw_set("size", self.size)?;
         table.raw_set("depth", self.depth)?;
         table.raw_set("font", self.font)?;
-        table.raw_set("fill_color", self.fill_color)?;
-        table.raw_set("outline_color", self.outline_color)?;
+        table.raw_set("color", self.color)?;
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
@@ -235,8 +231,7 @@ impl<'lua> FromLua<'lua> for PdfObjectText {
                     size: table.raw_get_ext("size")?,
                     depth: table.raw_get_ext("depth")?,
                     font: table.raw_get_ext("font")?,
-                    fill_color: table.raw_get_ext("fill_color")?,
-                    outline_color: table.raw_get_ext("outline_color")?,
+                    color: table.raw_get_ext("color")?,
                     link: table.raw_get_ext("link")?,
                 })
             }
@@ -457,8 +452,7 @@ mod tests {
                     depth = 123,
                     font = 456,
                     size = 789,
-                    fill_color = "123456",
-                    outline_color = "789ABC",
+                    color = "123456",
                     link = {
                         type = "uri",
                         uri = "https://example.com",
@@ -472,8 +466,7 @@ mod tests {
                 depth: Some(123),
                 font: Some(456),
                 size: Some(789.0),
-                fill_color: Some("#123456".parse().unwrap()),
-                outline_color: Some("#789ABC".parse().unwrap()),
+                color: Some("#123456".parse().unwrap()),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com"),
                 }),
@@ -508,8 +501,7 @@ mod tests {
             depth: Some(123),
             font: Some(456),
             size: Some(789.0),
-            fill_color: Some("#123456".parse().unwrap()),
-            outline_color: Some("#789ABC".parse().unwrap()),
+            color: Some("#123456".parse().unwrap()),
             link: Some(PdfLink::Uri {
                 uri: String::from("https://example.com"),
             }),
@@ -524,8 +516,7 @@ mod tests {
                 depth = 123,
                 font = 456,
                 size = 789,
-                fill_color = "123456",
-                outline_color = "789ABC",
+                color = "123456",
                 link = {
                     type = "uri",
                     uri = "https://example.com",
