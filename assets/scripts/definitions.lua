@@ -96,7 +96,6 @@ pdf.planner = {
 
 ---@alias pdf.common.BoundsArg
 ---| pdf.common.Bounds
----| {llx:number, lly:number, urx:number, ury:number}
 ---| {[1]:{[1]:number, [2]:number}, [2]:{[1]:number, [2]:number}}
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
 
@@ -119,6 +118,10 @@ function PdfBounds:width() end
 ---Calculates the height of the bounds.
 ---@return number
 function PdfBounds:height() end
+
+---Returns coordinates in table as {ll.x, ll.y, ur.x, ur.y}.
+---@return {[1]:number, [2]:number, [3]:number, [4]:number}
+function PdfBounds:to_coords() end
 
 ---@class pdf.common.Date
 local PdfDate = {}
@@ -407,16 +410,10 @@ local PdfObjectRectArgsBase = {
 ---@field ur {x:number, y:number}
 
 ---@class pdf.object.RectArgs2: pdf.object.RectArgsBase
----@field llx number
----@field lly number
----@field urx number
----@field ury number
-
----@class pdf.object.RectArgs3: pdf.object.RectArgsBase
 ---@field [1] {[1]:number, [2]:number}
 ---@field [2] {[1]:number, [2]:number}
 
----@class pdf.object.RectArgs4: pdf.object.RectArgsBase
+---@class pdf.object.RectArgs3: pdf.object.RectArgsBase
 ---@field [1] number
 ---@field [2] number
 ---@field [3] number
@@ -426,7 +423,6 @@ local PdfObjectRectArgsBase = {
 ---| pdf.object.RectArgs1
 ---| pdf.object.RectArgs2
 ---| pdf.object.RectArgs3
----| pdf.object.RectArgs4
 
 ---Creates a new rect object.
 ---
@@ -617,6 +613,11 @@ function pdf.utils.assert_deep_equal(a, b, opts) end
 ---@param b any
 ---@param opts? {ignore_metatable:boolean|nil}
 function pdf.utils.assert_not_deep_equal(a, b, opts) end
+
+---Creates a bounds instance from the provided table, or throws an error if invalid.
+---@param tbl table
+---@return pdf.common.Bounds
+function pdf.utils.bounds(tbl) end
 
 ---Checks if two values are deeply equal, which involves recursively
 ---traversing tables.
