@@ -1,4 +1,4 @@
-use crate::pdf::PdfLuaExt;
+use crate::pdf::{PdfBounds, PdfLuaExt};
 use mlua::prelude::*;
 use tailcall::tailcall;
 
@@ -150,6 +150,11 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
                     .unwrap_or(false);
                 PdfUtils::try_assert_deep_equal(a, b, false, ignore_metatable)
             })?,
+        )?;
+
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(|_, bounds: PdfBounds| Ok(bounds))?,
         )?;
 
         metatable.raw_set(
