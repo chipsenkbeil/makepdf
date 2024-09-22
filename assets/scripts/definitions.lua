@@ -14,23 +14,33 @@ pdf = {}
 
 ---@class pdf.page
 pdf.page = {
+    ---DPI of the page.
     ---@type number
     dpi = 0,
-    --@type string|nil
+    ---Path to an external font to load as the default font.
+    ---If none provided, uses builtin font.
+    ---@type string|nil
     font = "",
-    --@type number
+    ---Width of the page in millimeters.
+    ---@type number
     width = 0,
-    --@type number
+    ---Height of the page in millimeters.
+    ---@type number
     height = 0,
-    --@type number
+    ---Default size of text font in points.
+    ---@type number
     font_size = 0,
-    --@type pdf.common.Color
+    ---Used for the interior of rects and shapes, and for text.
+    ---@type pdf.common.Color
     fill_color = "",
-    --@type pdf.common.Color
+    ---Used for the exterior of rects and shapes, and for lines.
+    ---@type pdf.common.Color
     outline_color = "",
-    --@type number
+    ---Default thickness of lines.
+    ---@type number
     outline_thickness = 0,
-    --@type pdf.object.line.Style
+    ---Default style of lines.
+    ---@type pdf.object.line.Style
     line_style = "solid",
 }
 
@@ -312,9 +322,7 @@ local PdfObjectLine = {
     ---@type integer|nil
     depth = nil,
     ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
+    color = nil,
     ---@type number|nil
     thickness = nil,
     ---@type pdf.object.line.Style|nil
@@ -339,9 +347,7 @@ local PdfObjectLineArgs = {
     ---@type integer|nil
     depth = nil,
     ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
+    color = nil,
     ---@type number|nil
     thickness = nil,
     ---@type pdf.object.line.Style|nil
@@ -497,9 +503,7 @@ local PdfObjectText = {
     ---@type number|nil
     size = nil,
     ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
+    color = nil,
     ---@type pdf.common.Link|nil
     link = nil,
 }
@@ -530,9 +534,7 @@ local PdfObjectTextArgsBase = {
     ---@type number|nil
     size = nil,
     ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
+    color = nil,
     ---@type pdf.common.LinkArg|nil
     link = nil,
 }
