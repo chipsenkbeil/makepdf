@@ -1,4 +1,6 @@
-use crate::pdf::{PdfHorizontalAlign, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign};
+use crate::pdf::{
+    PdfAlign, PdfHorizontalAlign, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
+};
 use mlua::prelude::*;
 use printpdf::{Mm, Rect};
 
@@ -118,6 +120,13 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
         self.add_to_table(&table)?;
 
         metatable.raw_set(
+            "align_to",
+            lua.create_function(move |_, (this, other, align): (Self, Self, PdfAlign)| {
+                Ok(this.align_to(other, align.to_v_h()))
+            })?,
+        )?;
+
+        metatable.raw_set(
             "width",
             lua.create_function(move |_, this: Self| Ok(this.width().0))?,
         )?;
@@ -125,6 +134,16 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
         metatable.raw_set(
             "height",
             lua.create_function(move |_, this: Self| Ok(this.height().0))?,
+        )?;
+
+        metatable.raw_set(
+            "to_coords",
+            lua.create_function(move |_, this: Self| {
+                // NOTE: We need to return a Vec<f32> to make it a table {nunber, nunber, ...}
+                //       as returning a tuple makes it act like a vararg return instead.
+                let (llx, lly, urx, ury) = this.to_coords_f32();
+                Ok(vec![llx, lly, urx, ury])
+            })?,
         )?;
 
         Ok(LuaValue::Table(table))
