@@ -1,6 +1,6 @@
 use crate::pdf::{
     PdfAlign, PdfBounds, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation, PdfLuaExt,
-    PdfLuaTableExt, PdfObject, PdfObjectType, PdfVerticalAlign,
+    PdfLuaTableExt, PdfObject, PdfObjectType, PdfPadding, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 
@@ -8,12 +8,15 @@ use mlua::prelude::*;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectGroup {
     pub objects: Vec<PdfObject>,
+    pub padding: Option<PdfPadding>,
     pub link: Option<PdfLink>,
 }
 
 impl PdfObjectGroup {
     /// Returns bounds for the group by calculating the bounds of each object within the group and
     /// returning the minimum bounds that will contain all of them.
+    ///
+    /// This is the raw bounds, not factoring in any padding.
     pub fn bounds(&self, ctx: PdfContext) -> PdfBounds {
         let mut bounds = if let Some(obj) = self.objects.first() {
             obj.bounds(ctx)
@@ -38,6 +41,23 @@ impl PdfObjectGroup {
             if b.ur.y > bounds.ur.y {
                 bounds.ur.y = b.ur.y;
             }
+        }
+
+        bounds
+    }
+
+    /// Returns bounds for the group by calculating the bounds of each object within the group and
+    /// returning the minimum bounds that will contain all of them.
+    ///
+    /// This factors in padding and is applied to the raw bounds.
+    pub fn padded_bounds(&self, ctx: PdfContext) -> PdfBounds {
+        let mut bounds = self.bounds(ctx);
+
+        if let Some(padding) = self.padding {
+            bounds.ll.x += padding.left;
+            bounds.ll.y += padding.bottom;
+            bounds.ur.x -= padding.right;
+            bounds.ur.y -= padding.top;
         }
 
         bounds
@@ -72,6 +92,24 @@ impl PdfObjectGroup {
             if b.ur.y > bounds.ur.y {
                 bounds.ur.y = b.ur.y;
             }
+        }
+
+        Ok(bounds)
+    }
+
+    /// Returns bounds for the group by calculating the bounds of each object within the group and
+    /// returning the minimum bounds that will contain all of them.
+    ///
+    /// Calculates bounds from a [`Lua`] runtime, which occurs earlier than when a [`PdfContext`]
+    /// is available.
+    pub(crate) fn lua_padded_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
+        let mut bounds = self.lua_bounds(lua)?;
+
+        if let Some(padding) = self.padding {
+            bounds.ll.x += padding.left;
+            bounds.ll.y += padding.bottom;
+            bounds.ur.x -= padding.right;
+            bounds.ur.y -= padding.top;
         }
 
         Ok(bounds)
@@ -212,6 +250,7 @@ impl FromIterator<PdfObject> for PdfObjectGroup {
     fn from_iter<I: IntoIterator<Item = PdfObject>>(iter: I) -> Self {
         Self {
             objects: iter.into_iter().collect(),
+            padding: None,
             link: None,
         }
     }
@@ -227,6 +266,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
         }
 
         table.raw_set("type", PdfObjectType::Group)?;
+        table.raw_set("padding", self.padding)?;
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
@@ -244,6 +284,11 @@ impl<'lua> IntoLua<'lua> for PdfObjectGroup {
             lua.create_function(move |lua, this: Self| this.lua_bounds(lua))?,
         )?;
 
+        metatable.raw_set(
+            "padded_bounds",
+            lua.create_function(move |lua, this: Self| this.lua_padded_bounds(lua))?,
+        )?;
+
         Ok(LuaValue::Table(table))
     }
 }
@@ -254,6 +299,7 @@ impl<'lua> FromLua<'lua> for PdfObjectGroup {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 objects: table.clone().sequence_values().collect::<LuaResult<_>>()?,
+                padding: table.raw_get_ext("padding")?,
                 link: table.raw_get_ext("link")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
@@ -396,6 +442,103 @@ mod tests {
     }
 
     #[test]
+    fn should_be_able_to_calculate_padded_bounds_of_group() {
+        // Create a pdf context that we need for bounds calculations
+        let doc = PdfDocument::empty("");
+        let (page_idx, layer_idx) = doc.add_page(Mm(0.0), Mm(0.0), "");
+        let layer = doc.get_page(page_idx).get_layer(layer_idx);
+        let mut font = RuntimeFonts::new();
+        let font_id = font.add_builtin_font().unwrap();
+        font.add_font_as_fallback(font_id);
+        let ctx = PdfContext {
+            config: &PdfConfig::default(),
+            layer: &layer,
+            fonts: &font,
+            fallback_font_id: font_id,
+        };
+
+        // Build up a group
+        let mut group: PdfObjectGroup = vec![
+            PdfObject::Text(PdfObjectText {
+                point: PdfPoint::from_coords_f32(0.0, 0.0),
+                text: String::from("hello world"),
+                size: Some(36.0),
+                ..Default::default()
+            }),
+            PdfObject::Rect(PdfObjectRect {
+                bounds: PdfBounds::from_coords_f32(-1.0, 2.0, 3.0, 15.0),
+                ..Default::default()
+            }),
+        ]
+        .into_iter()
+        .collect();
+
+        // Set the padding to something
+        group.padding = Some(PdfPadding {
+            top: Mm(1.0),
+            right: Mm(2.0),
+            bottom: Mm(3.0),
+            left: Mm(4.0),
+        });
+
+        // Verify regular bounds are unaffected
+        assert_eq!(
+            group.bounds(ctx),
+            PdfBounds::from_coords_f32(-1.0, -3.810_002_3, 83.820_05, 15.0)
+        );
+
+        // Verify padded bounds are affected
+        assert_eq!(
+            group.padded_bounds(ctx),
+            PdfBounds::from_coords_f32(3.0, -0.810_002_3, 81.820_05, 14.0)
+        );
+    }
+
+    #[test]
+    fn should_be_able_to_calculate_padded_bounds_of_group_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+        lua.set_app_data({
+            let mut fonts = RuntimeFonts::new();
+            let id = fonts.add_builtin_font().unwrap();
+            fonts.add_font_as_fallback(id);
+            fonts
+        });
+
+        // Test the bounds, which should correctly cover group of objects, adjusted for padding
+        lua.load(chunk! {
+            local group = pdf.object.group({
+                pdf.object.text({
+                    x = 0,
+                    y = 0,
+                    text = "hello world",
+                    size = 36.0,
+                }),
+                pdf.object.rect({
+                    ll = { x = -1, y = 2 },
+                    ur = { x = 3,  y = 15 },
+                }),
+                padding = { top = 1, right = 2, bottom = 3, left = 4 },
+            })
+
+            // Verify regular bounds are unaffected
+            pdf.utils.assert_deep_equal(group:bounds(), {
+                ll = { x = -1,                  y = -3.810002326965332  },
+                ur = { x = 83.82005310058594,   y = 15                  },
+            })
+
+            // Verify padded bounds are affected
+            pdf.utils.assert_deep_equal(group:padded_bounds(), {
+                ll = { x = 3,                   y = -0.810002326965332  },
+                ur = { x = 81.82005310058594,   y = 14                  },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
     fn should_be_able_to_convert_from_lua() {
         // Can convert from empty table into a group
         assert_eq!(
@@ -409,11 +552,20 @@ mod tests {
         // Can convert from an table with just a link into a group
         assert_eq!(
             Lua::new()
-                .load(chunk!({ link = { type = "uri", uri = "https://example.com" } }))
+                .load(chunk!({
+                    padding = { top = 1, right = 2, bottom = 3, left = 4 },
+                    link = { type = "uri", uri = "https://example.com" },
+                }))
                 .eval::<PdfObjectGroup>()
                 .unwrap(),
             PdfObjectGroup {
                 objects: Vec::new(),
+                padding: Some(PdfPadding {
+                    top: Mm(1.0),
+                    right: Mm(2.0),
+                    bottom: Mm(3.0),
+                    left: Mm(4.0)
+                }),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com")
                 })
@@ -434,6 +586,7 @@ mod tests {
                     PdfObjectRect::default().into(),
                     PdfObjectText::default().into(),
                 ],
+                padding: None,
                 link: None,
             },
         );
@@ -444,6 +597,7 @@ mod tests {
                 .load(chunk!({
                     { type = "rect" },
                     { type = "text" },
+                    padding = { top = 1, right = 2, bottom = 3, left = 4 },
                     link = { type = "uri", uri = "https://example.com" },
                 }))
                 .eval::<PdfObjectGroup>()
@@ -453,6 +607,12 @@ mod tests {
                     PdfObjectRect::default().into(),
                     PdfObjectText::default().into(),
                 ],
+                padding: Some(PdfPadding {
+                    top: Mm(1.0),
+                    right: Mm(2.0),
+                    bottom: Mm(3.0),
+                    left: Mm(4.0)
+                }),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com")
                 })
@@ -467,10 +627,7 @@ mod tests {
         lua.globals().raw_set("pdf", Pdf::default()).unwrap();
 
         // Test group with nothing
-        let group = PdfObjectGroup {
-            objects: vec![],
-            link: None,
-        };
+        let group = PdfObjectGroup::default();
 
         lua.load(chunk! {
             pdf.utils.assert_deep_equal($group, {
@@ -486,6 +643,12 @@ mod tests {
                 PdfObjectRect::default().into(),
                 PdfObjectText::default().into(),
             ],
+            padding: Some(PdfPadding {
+                top: Mm(1.0),
+                right: Mm(2.0),
+                bottom: Mm(3.0),
+                left: Mm(4.0),
+            }),
             link: Some(PdfLink::Uri {
                 uri: String::from("https://example.com"),
             }),
@@ -496,6 +659,7 @@ mod tests {
                 type = "group",
                 { type = "rect", ll = { x = 0, y = 0 }, ur = { x = 0, y = 0 } },
                 { type = "text", text = "", x = 0, y = 0 },
+                padding = { top = 1, right = 2, bottom = 3, left = 4 },
                 link = {
                     type = "uri",
                     uri = "https://example.com",
