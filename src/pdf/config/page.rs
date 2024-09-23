@@ -1,4 +1,4 @@
-use crate::pdf::{PdfColor, PdfLuaTableExt, PdfObjectLineStyle};
+use crate::pdf::{PdfBounds, PdfColor, PdfLuaExt, PdfLuaTableExt, PdfObjectLineStyle};
 use mlua::prelude::*;
 use printpdf::{Mm, Px};
 
@@ -47,10 +47,19 @@ impl Default for PdfConfigPage {
     }
 }
 
+impl PdfConfigPage {
+    /// Returns bounds covering the entire page based on its width and height.
+    pub fn bounds(&self) -> PdfBounds {
+        let (llx, lly) = (Mm(0.0), Mm(0.0));
+        let (urx, ury) = (llx + self.width, lly + self.height);
+        PdfBounds::from_coords(llx, lly, urx, ury)
+    }
+}
+
 impl<'lua> IntoLua<'lua> for PdfConfigPage {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
 
         // Configurations for page
         table.raw_set("dpi", self.dpi)?;
@@ -64,6 +73,12 @@ impl<'lua> IntoLua<'lua> for PdfConfigPage {
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("outline_thickness", self.outline_thickness)?;
         table.raw_set("line_style", self.line_style)?;
+
+        // Specialized helper functions
+        metatable.raw_set(
+            "bounds",
+            lua.create_function(|_, this: PdfConfigPage| Ok(this.bounds()))?,
+        )?;
 
         Ok(LuaValue::Table(table))
     }

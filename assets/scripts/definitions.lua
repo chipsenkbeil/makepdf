@@ -44,6 +44,10 @@ pdf.page = {
     line_style = "solid",
 }
 
+---Returns the bounds covering the entire page.
+---@return pdf.common.Bounds
+function pdf.page:bounds() end
+
 -------------------------------------------------------------------------------
 -- PLANNER CONFIGURATION
 -------------------------------------------------------------------------------
@@ -463,6 +467,10 @@ local PdfObjectRect = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type pdf.common.PaintMode|nil
+    mode = nil,
+    ---@type pdf.common.WindingOrder|nil
+    order = nil,
     ---@type pdf.common.Link|nil
     link = nil,
 }
@@ -485,6 +493,10 @@ local PdfObjectRectArgsBase = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type pdf.common.PaintMode|nil
+    mode = nil,
+    ---@type pdf.common.WindingOrder|nil
+    order = nil,
     ---@type pdf.common.LinkArg|nil
     link = nil,
 }
@@ -507,6 +519,7 @@ local PdfObjectRectArgsBase = {
 ---| pdf.object.RectArgs1
 ---| pdf.object.RectArgs2
 ---| pdf.object.RectArgs3
+---| pdf.object.RectArgsBase
 
 ---Creates a new rect object.
 ---
@@ -634,6 +647,7 @@ local PdfObjectTextArgsBase = {
 ---| pdf.object.TextArgs1
 ---| pdf.object.TextArgs2
 ---| pdf.object.TextArgs3
+---| pdf.object.TextArgsBase
 
 ---Creates a new text object.
 ---
