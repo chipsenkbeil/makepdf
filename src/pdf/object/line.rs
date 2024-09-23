@@ -412,7 +412,7 @@ mod tests {
                 { x = 3, y = 4 },
                 type = "line",
                 depth = 123,
-                color = "123456",
+                color = { red = 18, green = 52, blue = 86 },
                 thickness = 456,
                 style = "dashed",
                 link = {

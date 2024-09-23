@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfLuaExt};
+use crate::pdf::{PdfBounds, PdfColor, PdfLuaExt};
 use mlua::prelude::*;
 use printpdf::{Mm, Pt};
 use tailcall::tailcall;
@@ -174,6 +174,11 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
         metatable.raw_set(
             "bounds",
             lua.create_function(|_, bounds: PdfBounds| Ok(bounds))?,
+        )?;
+
+        metatable.raw_set(
+            "color",
+            lua.create_function(|_, color: PdfColor| Ok(color))?,
         )?;
 
         metatable.raw_set(
@@ -364,6 +369,35 @@ mod tests {
                 local expected = 0.3527
                 local actual = math.floor(u.pt_to_mm(10000)) / 10000
                 u.assert_deep_equal(expected, actual)
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_value_to_bounds() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(u.bounds({ 1, 2, 3, 4 }), {
+                    ll = { x = 1, y = 2 },
+                    ur = { x = 3, y = 4 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_value_to_color() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(u.color("#010203"), {
+                    red = 1,
+                    green = 2,
+                    blue = 3,
+                })
             })
             .exec()
             .expect("Assertion failed");

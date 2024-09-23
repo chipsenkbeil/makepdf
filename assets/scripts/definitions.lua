@@ -31,10 +31,10 @@ pdf.page = {
     ---@type number
     font_size = 0,
     ---Used for the interior of rects and shapes, and for text.
-    ---@type pdf.common.Color
+    ---@type pdf.common.ColorLike
     fill_color = "",
     ---Used for the exterior of rects and shapes, and for lines.
-    ---@type pdf.common.Color
+    ---@type pdf.common.ColorLike
     outline_color = "",
     ---Default thickness of lines.
     ---@type number
@@ -77,7 +77,6 @@ pdf.planner = {
 -- COMMON TYPES
 -------------------------------------------------------------------------------
 
----@alias pdf.common.Color string
 ---@alias pdf.common.Point {x:number, y:number}
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
@@ -85,6 +84,12 @@ pdf.planner = {
 ---@alias pdf.common.HorizontalAlign "left"|"middle"|"right"
 ---@alias pdf.common.VerticalAlign "top"|"middle"|"bottom"
 ---@alias pdf.common.Padding {top:number, right:number, bottom:number, left:number}
+
+---@alias pdf.common.ColorLike
+---| string
+---| {[1]:integer, [2]:integer, [3]:integer}
+---| {r:integer, g:integer, b:integer}
+---| pdf.common.Color
 
 ---@alias pdf.common.Link
 ---| {type:"goto", page:integer}
@@ -186,6 +191,22 @@ function PdfBounds:height() end
 ---@return {[1]:number, [2]:number, [3]:number, [4]:number}
 function PdfBounds:to_coords() end
 
+---@class pdf.common.Color
+local PdfColor = {}
+
+---@type integer
+PdfColor.red = 0
+
+---@type integer
+PdfColor.green = 0
+
+---@type integer
+PdfColor.blue = 0
+
+---Converts color into a hex string.
+---@return string
+function PdfColor:__tostring() end
+
 ---@class pdf.common.Date
 local PdfDate = {}
 
@@ -284,6 +305,10 @@ function PdfDate.weeks_in_month_sunday() end
 ---Returns total calendar weeks the month of the date spans where beginning of week starts on Monday.
 ---@return integer
 function PdfDate.weeks_in_month_monday() end
+
+---Converts date into a string in the format "YYYY-MM-DD".
+---@return string
+function PdfDate:__tostring() end
 
 ---@class pdf.common.DateWeekday
 local PdfDateWeekday = {}
@@ -496,7 +521,7 @@ function PdfObjectLine:bounds() end
 local PdfObjectLineArgs = {
     ---@type integer|nil
     depth = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     color = nil,
     ---@type number|nil
     thickness = nil,
@@ -555,9 +580,9 @@ function PdfObjectRect:bounds() end
 local PdfObjectRectArgsBase = {
     ---@type integer|nil
     depth = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     fill_color = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     outline_color = nil,
     ---@type number|nil
     outline_thickness = nil,
@@ -631,9 +656,9 @@ function PdfObjectShape:bounds() end
 local PdfObjectShapeArgs = {
     ---@type integer|nil
     depth = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     fill_color = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     outline_color = nil,
     ---@type number|nil
     outline_thickness = nil,
@@ -698,7 +723,7 @@ local PdfObjectTextArgsBase = {
     font = nil,
     ---@type number|nil
     size = nil,
-    ---@type pdf.common.Color|nil
+    ---@type pdf.common.ColorLike|nil
     color = nil,
     ---@type pdf.common.LinkArg|nil
     link = nil,

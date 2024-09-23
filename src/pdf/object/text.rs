@@ -516,7 +516,7 @@ mod tests {
                 depth = 123,
                 font = 456,
                 size = 789,
-                color = "123456",
+                color = { red = 18, green = 52, blue = 86 },
                 link = {
                     type = "uri",
                     uri = "https://example.com",
