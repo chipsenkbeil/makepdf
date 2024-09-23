@@ -256,73 +256,73 @@ PdfDate.ordinal = 0
 ---See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 ---@param fmt string
 ---@return string
-function PdfDate.format(fmt) end
+function PdfDate:format(fmt) end
 
 ---@param days integer
 ---@return pdf.common.Date|nil
-function PdfDate.add_days(days) end
+function PdfDate:add_days(days) end
 
 ---@param weeks integer
 ---@return pdf.common.Date|nil
-function PdfDate.add_weeks(weeks) end
+function PdfDate:add_weeks(weeks) end
 
 ---@param months integer
 ---@return pdf.common.Date|nil
-function PdfDate.add_months(months) end
+function PdfDate:add_months(months) end
 
 ---@return pdf.common.Date|nil
-function PdfDate.tomorrow() end
+function PdfDate:tomorrow() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.yesterday() end
+function PdfDate:yesterday() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.next_week() end
+function PdfDate:next_week() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.last_week() end
+function PdfDate:last_week() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.next_month() end
+function PdfDate:next_month() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.last_month() end
+function PdfDate:last_month() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.beginning_of_year() end
+function PdfDate:beginning_of_year() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.end_of_year() end
+function PdfDate:end_of_year() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.beginning_of_month() end
+function PdfDate:beginning_of_month() end
 
 ---@return pdf.common.Date|nil
-function PdfDate.end_of_month() end
+function PdfDate:end_of_month() end
 
 ---Returns current date moved to beginning of week where beginning of week starts on Sunday.
 ---@return pdf.common.Date|nil
-function PdfDate.beginning_of_week_sunday() end
+function PdfDate:beginning_of_week_sunday() end
 
 ---Returns current date moved to end of week where beginning of week starts on Sunday.
 ---@return pdf.common.Date|nil
-function PdfDate.end_of_week_sunday() end
+function PdfDate:end_of_week_sunday() end
 
 ---Returns current date moved to beginning of week where beginning of week starts on Monday.
 ---@return pdf.common.Date|nil
-function PdfDate.beginning_of_week_monday() end
+function PdfDate:beginning_of_week_monday() end
 
 ---Returns current date moved to end of week where beginning of week starts on Monday.
 ---@return pdf.common.Date|nil
-function PdfDate.end_of_week_monday() end
+function PdfDate:end_of_week_monday() end
 
 ---Returns total calendar weeks the month of the date spans where beginning of week starts on Sunday.
 ---@return integer
-function PdfDate.weeks_in_month_sunday() end
+function PdfDate:weeks_in_month_sunday() end
 
 ---Returns total calendar weeks the month of the date spans where beginning of week starts on Monday.
 ---@return integer
-function PdfDate.weeks_in_month_monday() end
+function PdfDate:weeks_in_month_monday() end
 
 ---Converts date into a string in the format "YYYY-MM-DD".
 ---@return string
@@ -333,36 +333,36 @@ local PdfDateWeekday = {}
 
 ---Returns the short name of the weekday.
 ---@return "mon"|"tue"|"wed"|"thu"|"fri"|"sat"|"sun"
-function PdfDateWeekday.short_name() end
+function PdfDateWeekday:short_name() end
 
 ---Returns the short name of the weekday.
 ---@return "monday"|"tuesday"|"wednesday"|"thursday"|"friday"|"saturday"|"sunday"
-function PdfDateWeekday.long_name() end
+function PdfDateWeekday:long_name() end
 
 ---Returns next day of the week.
 ---@return pdf.common.DateWeekday
-function PdfDateWeekday.next_weekday() end
+function PdfDateWeekday:next_weekday() end
 
 ---Returns previous day of the week.
 ---@return pdf.common.DateWeekday
-function PdfDateWeekday.prev_weekday() end
+function PdfDateWeekday:prev_weekday() end
 
 ---Returns a day-of-week number starting from Monday = 1.
 ---(ISO 8601 weekday number)
 ---@return integer
-function PdfDateWeekday.number_from_monday() end
+function PdfDateWeekday:number_from_monday() end
 
 ---Returns a day-of-week number starting from Sunday = 1.
 ---@return integer
-function PdfDateWeekday.number_from_sunday() end
+function PdfDateWeekday:number_from_sunday() end
 
 ---Returns a day-of-week number starting from Monday = 0.
 ---@return integer
-function PdfDateWeekday.num_days_from_monday() end
+function PdfDateWeekday:num_days_from_monday() end
 
 ---Returns a day-of-week number starting from Sunday = 0.
 ---@return integer
-function PdfDateWeekday.num_days_from_sunday() end
+function PdfDateWeekday:num_days_from_sunday() end
 
 ---Returns number of days from specified `weekday`.
 ---
@@ -370,7 +370,11 @@ function PdfDateWeekday.num_days_from_sunday() end
 ---is Wednesday, this would return 2.
 ---@param weekday pdf.common.DateWeekday
 ---@return integer
-function PdfDateWeekday.days_since(weekday) end
+function PdfDateWeekday:days_since(weekday) end
+
+---Converts weekday into the long string form.
+---@return string
+function PdfDateWeekday:__tostring() end
 
 -------------------------------------------------------------------------------
 -- RUNTIME TYPES

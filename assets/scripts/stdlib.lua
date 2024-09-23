@@ -134,17 +134,17 @@ function pdf.object.calendar(tbl)
 
     -- Get beginning and end day of week for the month for a Sunday-based calendar
     -- indexed where Sunday = 1, Monday = 2, ...
-    local month_start_day_of_week = month.last_month()
-        .end_of_month()
-        .tomorrow()
+    local month_start_day_of_week = month:last_month()
+        :end_of_month()
+        :tomorrow()
         .weekday
-        .number_from_sunday()
-    local month_end_day_of_week = month.next_month()
-        .beginning_of_month()
-        .yesterday()
+        :number_from_sunday()
+    local month_end_day_of_week = month:next_month()
+        :beginning_of_month()
+        :yesterday()
         .weekday
-        .number_from_sunday()
-    local weeks_in_month = month.weeks_in_month_sunday()
+        :number_from_sunday()
+    local weeks_in_month = month:weeks_in_month_sunday()
 
     -- Build our 7 x 6 grid of calendar days
     for week_of_month = 1, 6 do
@@ -166,7 +166,7 @@ function pdf.object.calendar(tbl)
                 - (month_start_day_of_week - 1)
 
             -- Calculate date of day this represents, if valid
-            local date = is_valid_block and month.beginning_of_month().add_days(day_num - 1)
+            local date = is_valid_block and month:beginning_of_month():add_days(day_num - 1)
 
             -- Create the container block for the day
             local block = cell_rect_text({
