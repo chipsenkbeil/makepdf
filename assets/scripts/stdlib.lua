@@ -51,6 +51,7 @@ end
 ---@field month pdf.common.Date
 ---@field fill_color? pdf.common.ColorLike
 ---@field text_color? pdf.common.ColorLike
+---@field date_to_link? fun(date:pdf.common.Date):(pdf.common.LinkLike|nil)
 
 ---Creates a calendar-like object for the specified `month` that fits into `bounds`.
 ---
@@ -61,6 +62,7 @@ function pdf.object.calendar(tbl)
     ---@type pdf.Object[]
     local objects = {}
     local month = tbl.month
+    local date_to_link = tbl.date_to_link
 
     -- Text color for text placed on top of filled rects
     local fill_color = tbl.fill_color or pdf.page.fill_color
@@ -156,6 +158,16 @@ function pdf.object.calendar(tbl)
                 or (week_of_month == weeks_in_month and day_of_week <= month_end_day_of_week)
                 or (week_of_month > 1 and week_of_month < weeks_in_month)
 
+            -- Calculate the calendar number from 1 to 31 by looking at
+            -- the raw number from 1 to 35 and subracting the start of
+            -- the month and adding 1 to get the actual start num
+            local day_num = ((week_of_month - 1) * 7)
+                + day_of_week
+                - (month_start_day_of_week - 1)
+
+            -- Calculate date of day this represents, if valid
+            local date = is_valid_block and month.beginning_of_month().add_days(day_num - 1)
+
             -- Create the container block for the day
             local block = cell_rect_text({
                 row = week_of_month * 2,
@@ -166,29 +178,21 @@ function pdf.object.calendar(tbl)
                     fill_color = is_valid_block and fill_color or invalid_fill_color,
                     outline_color = fill_color,
                     mode = is_valid_block and "stroke" or "fill_stroke",
+                    link = date and date_to_link and date_to_link(date) or nil,
                 }
             })
             table.insert(objects, block)
 
             if is_valid_block then
-                local bounds = block:bounds()
-                local ll = bounds.ll
-                local ur = bounds.ur
-
-                -- Shrink the bounds of the day display to be a quarter of the size
-                ur.x = ur.x - (bounds:width() * 0.75)
-                ur.y = ur.y - (bounds:height() * 0.75)
-
-                -- Calculate the calendar number from 1 to 31 by looking at
-                -- the raw number from 1 to 35 and subracting the start of
-                -- the month and adding 1 to get the actual start num
-                local day_num = ((week_of_month - 1) * 7)
-                    + day_of_week
-                    - (month_start_day_of_week - 1)
+                -- Make a block with text that is a quarter of the size of the day block
+                local bounds = block:bounds():scale_by_factor({
+                    width = 0.25,
+                    height = 0.25,
+                })
 
                 -- Place the day as a number in the top-left (1/4 of size)
                 local day = pdf.object.rect_text({
-                    rect = { ll = ll, ur = ur, fill_color = fill_color },
+                    rect = { ll = bounds.ll, ur = bounds.ur, fill_color = fill_color },
                     text = { text = tostring(day_num), color = text_color, }
                 }):align_to(block:bounds(), { v = "top", h = "left" })
                 table.insert(objects, day)
