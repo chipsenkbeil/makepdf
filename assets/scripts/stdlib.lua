@@ -6,9 +6,11 @@
 -------------------------------------------------------------------------------
 
 ---@class pdf.object.RectTextArgs
----@field rect pdf.object.RectArgs
+---@field rect? pdf.object.RectArgs
 ---@field text? string|pdf.object.TextArgsBase
----@field align pdf.common.Align|nil
+---@field align? pdf.common.Align #where to place the text relative to the rect, after padding factored
+---@field margin? pdf.common.PaddingArg #padding applied to the rect bounds before the rect is created
+---@field padding? pdf.common.PaddingArg #padding applied to the text within the rect before created
 
 ---Creates a group containing a rect and text overlayed on top.
 ---
@@ -19,7 +21,8 @@ function pdf.object.rect_text(tbl)
     local objects = {}
 
     -- Create a rect from the provided configuration
-    local rect = pdf.object.rect(tbl.rect)
+    local rect = pdf.object.rect(tbl.rect or {})
+    rect = rect:with_bounds(rect:bounds():with_padding(tbl.margin))
     table.insert(objects, rect)
 
     local text_args = tbl.text
@@ -30,7 +33,7 @@ function pdf.object.rect_text(tbl)
     -- Create a text object aligned to the rect above
     if text_args then
         local text = pdf.object.text(text_args):align_to(
-            rect:bounds(),
+            rect:bounds():with_padding(tbl.padding),
             tbl.align or {
                 h = "middle",
                 v = "middle",
@@ -66,7 +69,7 @@ function pdf.object.calendar(tbl)
     })
 
     ---Creates a new rect text object fitting the cell bounds.
-    ---@param opts {rect?:pdf.object.RectArgsBase, text?:pdf.object.TextArgsBase}
+    ---@param opts? pdf.object.RectTextArgs
     local cell_rect_text = grid.map_cell(function(bounds, opts)
         opts = opts or {}
 
