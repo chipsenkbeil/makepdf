@@ -84,6 +84,7 @@ pdf.planner = {
 ---@alias pdf.common.Align {h:pdf.common.HorizontalAlign, v:pdf.common.VerticalAlign}
 ---@alias pdf.common.HorizontalAlign "left"|"middle"|"right"
 ---@alias pdf.common.VerticalAlign "top"|"middle"|"bottom"
+---@alias pdf.common.Padding {top:number, right:number, bottom:number, left:number}
 
 ---@alias pdf.common.Link
 ---| {type:"goto", page:integer}
@@ -103,6 +104,13 @@ pdf.planner = {
 ---| {[1]:{[1]:number, [2]:number}, [2]:{[1]:number, [2]:number}}
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
 
+---@alias pdf.common.PaddingArg
+---| {top?:number, right?:number, bottom?:number, left?:number}
+---| {[1]:number, [2]:number, [3]:number, [4]:number}
+---| {[1]:number, [2]:number, [3]:number}
+---| {[1]:number, [2]:number}
+---| {[1]:number}
+---| number
 
 ---@class pdf.common.Bounds
 ---@field ll pdf.common.Point
@@ -114,6 +122,13 @@ local PdfBounds = {}
 ---@param align pdf.common.Align
 ---@return pdf.common.Bounds
 function PdfBounds:align_to(bounds, align) end
+
+---Returns a copy of bounds with padding applied.
+---
+---All padding fields are optional and default to 0.
+---@param padding? pdf.common.PaddingArg
+---@return pdf.common.Bounds
+function PdfBounds:with_padding(padding) end
 
 ---Moves the bounds to the specified x & y position for the lower-left point,
 ---returning updated bounds.
