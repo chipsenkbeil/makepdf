@@ -12,6 +12,7 @@ pub struct PdfObjectRect {
     pub depth: Option<i64>,
     pub fill_color: Option<PdfColor>,
     pub outline_color: Option<PdfColor>,
+    pub outline_thickness: Option<f32>,
     pub mode: Option<PdfPaintMode>,
     pub order: Option<PdfWindingOrder>,
     pub link: Option<PdfLink>,
@@ -40,10 +41,14 @@ impl PdfObjectRect {
         // Get optional values, setting defaults when not specified
         let fill_color = self.fill_color.unwrap_or(ctx.config.page.fill_color);
         let outline_color = self.outline_color.unwrap_or(ctx.config.page.outline_color);
+        let outline_thickness = self
+            .outline_thickness
+            .unwrap_or(ctx.config.page.outline_thickness);
 
         // Set the color and positioning of our rect
         ctx.layer.set_fill_color(fill_color.into());
         ctx.layer.set_outline_color(outline_color.into());
+        ctx.layer.set_outline_thickness(outline_thickness);
         ctx.layer.add_rect(Rect {
             ll: self.bounds.ll.into(),
             ur: self.bounds.ur.into(),
@@ -63,6 +68,7 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         table.raw_set("depth", self.depth)?;
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
+        table.raw_set("outline_thickness", self.outline_thickness)?;
         table.raw_set("mode", self.mode)?;
         table.raw_set("order", self.order)?;
         table.raw_set("link", self.link)?;
@@ -116,6 +122,7 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                     depth: table.raw_get_ext("depth")?,
                     fill_color: table.raw_get_ext("fill_color")?,
                     outline_color: table.raw_get_ext("outline_color")?,
+                    outline_thickness: table.raw_get_ext("outline_thickness")?,
                     mode: table.raw_get_ext("mode")?,
                     order: table.raw_get_ext("order")?,
                     link: table.raw_get_ext("link")?,
@@ -283,6 +290,7 @@ mod tests {
                     depth = 123,
                     fill_color = "123456",
                     outline_color = "789ABC",
+                    outline_thickness = 456,
                     mode = "stroke",
                     order = "non_zero",
                     link = {
@@ -297,6 +305,7 @@ mod tests {
                 depth: Some(123),
                 fill_color: Some("#123456".parse().unwrap()),
                 outline_color: Some("#789ABC".parse().unwrap()),
+                outline_thickness: Some(456.0),
                 mode: Some(PdfPaintMode::stroke()),
                 order: Some(PdfWindingOrder::non_zero()),
                 link: Some(PdfLink::Uri {
@@ -331,6 +340,7 @@ mod tests {
             depth: Some(123),
             fill_color: Some("#123456".parse().unwrap()),
             outline_color: Some("#789ABC".parse().unwrap()),
+            outline_thickness: Some(456.0),
             mode: Some(PdfPaintMode::stroke()),
             order: Some(PdfWindingOrder::non_zero()),
             link: Some(PdfLink::Uri {
@@ -346,6 +356,7 @@ mod tests {
                 depth = 123,
                 fill_color = "123456",
                 outline_color = "789ABC",
+                outline_thickness = 456,
                 mode = "stroke",
                 order = "non_zero",
                 link = {
