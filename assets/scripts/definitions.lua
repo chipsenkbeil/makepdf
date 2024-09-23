@@ -745,3 +745,13 @@ function pdf.utils.starts_with(s, prefix) end
 ---@param prefix string
 ---@return boolean
 function pdf.utils.ends_with(s, prefix) end
+
+---Converts millimeters to points (approximate).
+---@param mm number
+---@return number
+function pdf.utils.mm_to_pt(mm) end
+
+---Converts points to millimeters (approximate).
+---@param pt number
+---@return number
+function pdf.utils.pt_to_mm(pt) end
