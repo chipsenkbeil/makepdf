@@ -1,5 +1,5 @@
 use crate::pdf::{
-    PdfAlign, PdfHorizontalAlign, PdfLuaExt, PdfLuaTableExt, PdfPoint, PdfVerticalAlign,
+    PdfAlign, PdfHorizontalAlign, PdfLuaExt, PdfLuaTableExt, PdfPadding, PdfPoint, PdfVerticalAlign,
 };
 use mlua::prelude::*;
 use printpdf::{Mm, Rect};
@@ -75,6 +75,18 @@ impl PdfBounds {
     pub const fn to_coords_f32(&self) -> (f32, f32, f32, f32) {
         let (llx, lly, urx, ury) = self.to_coords();
         (llx.0, lly.0, urx.0, ury.0)
+    }
+
+    /// Applies `padding` to the bounds, returning a copy of the newly-adjusted bounds.
+    pub fn with_padding(&self, padding: PdfPadding) -> Self {
+        let mut this = *self;
+
+        this.ll.x += padding.left;
+        this.ll.y += padding.bottom;
+        this.ur.x -= padding.right;
+        this.ur.y -= padding.top;
+
+        this
     }
 
     /// Returns a new bounds aligned to some other bounds based on `align`.
@@ -165,6 +177,16 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
             lua.create_function(move |_, (this, other, align): (Self, Self, PdfAlign)| {
                 Ok(this.align_to(other, align.to_v_h()))
             })?,
+        )?;
+
+        metatable.raw_set(
+            "with_padding",
+            lua.create_function(
+                move |_, (this, opts): (Self, Option<PdfPadding>)| match opts {
+                    Some(padding) => Ok(this.with_padding(padding)),
+                    None => Ok(this),
+                },
+            )?,
         )?;
 
         metatable.raw_set(
@@ -334,6 +356,99 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_support_with_padding() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        // Can apply positive padding to push bounds inward
+        assert_eq!(
+            bounds.with_padding(PdfPadding {
+                top: Mm(0.1),
+                right: Mm(0.2),
+                bottom: Mm(0.3),
+                left: Mm(0.4),
+            }),
+            PdfBounds::from_coords_f32(1.4, 2.3, 2.8, 3.9)
+        );
+
+        // Can apply negative padding to push bounds outward
+        assert_eq!(
+            bounds.with_padding(PdfPadding {
+                top: Mm(-0.1),
+                right: Mm(-0.2),
+                bottom: Mm(-0.3),
+                left: Mm(-0.4),
+            }),
+            PdfBounds::from_coords_f32(0.6, 1.7, 3.2, 4.1)
+        );
+
+        // Zero padding will make no adjustments
+        assert_eq!(
+            bounds.with_padding(PdfPadding {
+                top: Mm(0.0),
+                right: Mm(0.0),
+                bottom: Mm(0.0),
+                left: Mm(0.0),
+            }),
+            PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0)
+        );
+    }
+
+    #[test]
+    fn should_support_with_padding_in_lua() {
+        // NOTE: With smaller bounds and padding like 0.1, we get a crazy decimal
+        //       such as 3.0 -> 2.9000000000036 or something like that. Not sure
+        //       why, but to prevent this from affecting our test, we scale everything
+        //       up by a factor of 10 to make it easier.
+        let bounds = PdfBounds::from_coords_f32(10.0, 20.0, 30.0, 40.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // Supports adjusting neither parameter
+                u.assert_deep_equal($bounds:with_padding(), {
+                    ll = { x = 10,  y = 20 },
+                    ur = { x = 30,  y = 40 },
+                })
+                u.assert_deep_equal($bounds:with_padding({}), {
+                    ll = { x = 10,  y = 20 },
+                    ur = { x = 30,  y = 40 },
+                })
+
+                // Supports adjusting a single parameters
+                u.assert_deep_equal($bounds:with_padding({ top = 1 }), {
+                    ll = { x = 10,  y = 20 },
+                    ur = { x = 30,  y = 39 },
+                })
+                u.assert_deep_equal($bounds:with_padding({ right = 1 }), {
+                    ll = { x = 10,    y = 20 },
+                    ur = { x = 29,  y = 40 },
+                })
+                u.assert_deep_equal($bounds:with_padding({ bottom = 1 }), {
+                    ll = { x = 10,  y = 21 },
+                    ur = { x = 30,  y = 40 },
+                })
+                u.assert_deep_equal($bounds:with_padding({ left = 1 }), {
+                    ll = { x = 11,  y = 20 },
+                    ur = { x = 30,    y = 40 },
+                })
+
+                // Supports adjusting all parameters
+                u.assert_deep_equal($bounds:with_padding({
+                    top = 1,
+                    right = 2,
+                    bottom = 3,
+                    left = 4,
+                }), {
+                    ll = { x = 14,  y = 23 },
+                    ur = { x = 28,  y = 39 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
 
     #[test]
     fn should_support_move_to() {
