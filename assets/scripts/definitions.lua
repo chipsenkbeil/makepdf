@@ -526,6 +526,8 @@ local PdfObjectRect = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type number|nil
+    outline_thickness = nil,
     ---@type pdf.common.PaintMode|nil
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
@@ -557,6 +559,8 @@ local PdfObjectRectArgsBase = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type number|nil
+    outline_thickness = nil,
     ---@type pdf.common.PaintMode|nil
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
@@ -602,6 +606,8 @@ local PdfObjectShape = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type number|nil
+    outline_thickness = nil,
     ---@type pdf.common.PaintMode|nil
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
@@ -629,6 +635,8 @@ local PdfObjectShapeArgs = {
     fill_color = nil,
     ---@type pdf.common.Color|nil
     outline_color = nil,
+    ---@type number|nil
+    outline_thickness = nil,
     ---@type pdf.common.PaintMode|nil
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
