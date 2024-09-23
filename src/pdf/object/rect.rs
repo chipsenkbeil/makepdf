@@ -82,6 +82,19 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
             lua.create_function(move |_, this: Self| Ok(this.bounds))?,
         )?;
 
+        metatable.raw_set(
+            "with_bounds",
+            lua.create_function(
+                move |_, (mut this, bounds): (Self, Option<PdfBounds>)| match bounds {
+                    Some(bounds) => {
+                        this.bounds = bounds;
+                        Ok(this)
+                    }
+                    None => Ok(this),
+                },
+            )?,
+        )?;
+
         Ok(LuaValue::Table(table))
     }
 }
@@ -179,6 +192,36 @@ mod tests {
                 ur = { x = 3, y = 4 },
             })
             pdf.utils.assert_deep_equal(rect:bounds(), {
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            })
+        })
+        .exec()
+        .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_create_a_duplicate_rect_with_bounds_in_lua() {
+        // Stand up Lua runtime with everything configured properly for tests
+        let lua = Lua::new();
+        lua.globals().raw_set("pdf", Pdf::default()).unwrap();
+
+        lua.load(chunk! {
+            // No bounds specified
+            local rect = pdf.object.rect({})
+            pdf.utils.assert_deep_equal(rect:with_bounds(), {
+                type = "rect",
+                ll = { x = 0, y = 0 },
+                ur = { x = 0, y = 0 },
+            })
+
+            // Explicit bounds
+            local rect = pdf.object.rect({})
+            pdf.utils.assert_deep_equal(rect:with_bounds({
+                ll = { x = 1, y = 2 },
+                ur = { x = 3, y = 4 },
+            }), {
+                type = "rect",
                 ll = { x = 1, y = 2 },
                 ur = { x = 3, y = 4 },
             })
