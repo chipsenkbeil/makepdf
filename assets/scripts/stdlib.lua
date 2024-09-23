@@ -5,17 +5,17 @@
 -- that are written in Lua. This is designed as faster turnaround than Rust.
 -------------------------------------------------------------------------------
 
----@class pdf.object.RectTextArgs
----@field rect? pdf.object.RectArgs
----@field text? string|pdf.object.TextArgsBase
+---@class pdf.object.RectTextLike
+---@field rect? pdf.object.RectLike
+---@field text? string|pdf.object.TextLikeBase
 ---@field align? pdf.common.Align #where to place the text relative to the rect, after padding factored
----@field margin? pdf.common.PaddingArg #padding applied to the rect bounds before the rect is created
----@field padding? pdf.common.PaddingArg #padding applied to the text within the rect before created
+---@field margin? pdf.common.PaddingLike #padding applied to the rect bounds before the rect is created
+---@field padding? pdf.common.PaddingLike #padding applied to the text within the rect before created
 
 ---Creates a group containing a rect and text overlayed on top.
 ---
 ---Supports configuring the text's alignment within the bounds of the rect.
----@param tbl pdf.object.RectTextArgs
+---@param tbl pdf.object.RectTextLike
 ---@return pdf.object.Group
 function pdf.object.rect_text(tbl)
     local objects = {}
@@ -46,10 +46,16 @@ function pdf.object.rect_text(tbl)
     return pdf.object.group(objects)
 end
 
+---@class pdf.object.CalendarArgs
+---@field bounds pdf.common.Bounds
+---@field month pdf.common.Date
+---@field fill_color? pdf.common.ColorLike
+---@field text_color? pdf.common.ColorLike
+
 ---Creates a calendar-like object for the specified `month` that fits into `bounds`.
 ---
 ---Calendar starts with Sunday as first day of the week.
----@param tbl {bounds:pdf.common.Bounds, month:pdf.common.Date, fill_color?:pdf.common.Color, text_color?:pdf.common.Color}
+---@param tbl pdf.object.CalendarArgs
 ---@return pdf.object.Group
 function pdf.object.calendar(tbl)
     ---@type pdf.Object[]
@@ -69,11 +75,11 @@ function pdf.object.calendar(tbl)
     })
 
     ---Creates a new rect text object fitting the cell bounds.
-    ---@param opts? pdf.object.RectTextArgs
+    ---@param opts? pdf.object.RectTextLike
     local cell_rect_text = grid.map_cell(function(bounds, opts)
         opts = opts or {}
 
-        ---@type pdf.object.RectArgs
+        ---@type pdf.object.RectLike
         local rect_args = { ll = bounds.ll, ur = bounds.ur }
 
         -- Copy over rect-specific properties
