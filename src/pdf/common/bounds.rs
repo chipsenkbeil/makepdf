@@ -96,12 +96,53 @@ impl PdfBounds {
             PdfVerticalAlign::Bottom => other.ll.y - self.ll.y,
         };
 
+        self.shift_by(x_offset, y_offset)
+    }
+
+    /// Moves the bounds to `x` and `y`, placing the lower-left coordinate at that position,
+    /// returning a copy of the new bounds.
+    #[inline]
+    pub fn move_to(&self, x: Mm, y: Mm) -> Self {
+        // Figure out the offset we need to apply from the current lower-left to get there
+        let x_offset = x - self.ll.x;
+        let y_offset = y - self.ll.y;
+
+        self.shift_by(x_offset, y_offset)
+    }
+
+    /// Shifts the bounds by `x_offset` and `y_offset`, returning a copy of the new bounds.
+    #[inline]
+    pub fn shift_by(&self, x_offset: Mm, y_offset: Mm) -> Self {
         let mut this = *self;
         this.ll.x += x_offset;
         this.ur.x += x_offset;
         this.ll.y += y_offset;
         this.ur.y += y_offset;
         this
+    }
+
+    /// Scales the bounds to fit `width` and `height`, returning a copy of the new bounds.
+    #[inline]
+    pub fn scale_to(&self, width: Mm, height: Mm) -> Self {
+        // Figure out the difference in current width/height and desired width/height
+        let width_diff = width - self.width();
+        let height_diff = height - self.height();
+
+        // Adjust the bounds by applying the difference to the upper-right coordinate
+        let mut this = *self;
+        this.ur.x += width_diff;
+        this.ur.y += height_diff;
+        this
+    }
+
+    /// Scales the bounds by a factor of `width` and `height`, returning a copy of the new bounds.
+    #[inline]
+    pub fn scale_by_factor(&self, width: f32, height: f32) -> Self {
+        // Figure out desired absolute width and height from the scale factors
+        let width = self.width() * width;
+        let height = self.height() * height;
+
+        self.scale_to(width, height)
     }
 
     /// Adds bounds fields to an existing Lua table.
@@ -124,6 +165,83 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
             lua.create_function(move |_, (this, other, align): (Self, Self, PdfAlign)| {
                 Ok(this.align_to(other, align.to_v_h()))
             })?,
+        )?;
+
+        metatable.raw_set(
+            "move_to",
+            lua.create_function(
+                move |_, (this, opts): (Self, Option<LuaTable>)| match opts {
+                    Some(opts) => {
+                        let x = opts
+                            .raw_get_ext::<_, Option<f32>>("x")?
+                            .map(Mm)
+                            .unwrap_or(this.ll.x);
+                        let y = opts
+                            .raw_get_ext::<_, Option<f32>>("y")?
+                            .map(Mm)
+                            .unwrap_or(this.ll.y);
+
+                        Ok(this.move_to(x, y))
+                    }
+                    None => Ok(this),
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
+            "shift_by",
+            lua.create_function(
+                move |_, (this, opts): (Self, Option<LuaTable>)| match opts {
+                    Some(opts) => {
+                        let x = opts
+                            .raw_get_ext::<_, Option<f32>>("x")?
+                            .map(Mm)
+                            .unwrap_or_default();
+                        let y = opts
+                            .raw_get_ext::<_, Option<f32>>("y")?
+                            .map(Mm)
+                            .unwrap_or_default();
+
+                        Ok(this.shift_by(x, y))
+                    }
+                    None => Ok(this),
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
+            "scale_to",
+            lua.create_function(
+                move |_, (this, opts): (Self, Option<LuaTable>)| match opts {
+                    Some(opts) => {
+                        let width = opts
+                            .raw_get_ext::<_, Option<f32>>("width")?
+                            .map(Mm)
+                            .unwrap_or_else(|| this.width());
+                        let height = opts
+                            .raw_get_ext::<_, Option<f32>>("height")?
+                            .map(Mm)
+                            .unwrap_or_else(|| this.height());
+
+                        Ok(this.scale_to(width, height))
+                    }
+                    None => Ok(this),
+                },
+            )?,
+        )?;
+
+        metatable.raw_set(
+            "scale_by_factor",
+            lua.create_function(
+                move |_, (this, opts): (Self, Option<LuaTable>)| match opts {
+                    Some(opts) => {
+                        let width = opts.raw_get_ext::<_, Option<f32>>("width")?.unwrap_or(1.0);
+                        let height = opts.raw_get_ext::<_, Option<f32>>("height")?.unwrap_or(1.0);
+                        Ok(this.scale_by_factor(width, height))
+                    }
+                    None => Ok(this),
+                },
+            )?,
         )?;
 
         metatable.raw_set(
@@ -216,6 +334,226 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_support_move_to() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        // Supports increases and decreases in position
+        assert_eq!(
+            bounds.move_to(Mm(5.0), Mm(1.0)),
+            PdfBounds::from_coords_f32(5.0, 1.0, 7.0, 3.0)
+        );
+
+        // Moving to same lower-left should do nothing
+        assert_eq!(
+            bounds.move_to(Mm(1.0), Mm(2.0)),
+            PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0)
+        );
+    }
+
+    #[test]
+    fn should_support_move_to_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // Supports adjusting neither parameter
+                u.assert_deep_equal($bounds:move_to(), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:move_to({}), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+
+                // Supports adjusting a single parameters
+                u.assert_deep_equal($bounds:move_to({ x = 5 }), {
+                    ll = { x = 5,  y = 2 },
+                    ur = { x = 7,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:move_to({ y = 1 }), {
+                    ll = { x = 1,  y = 1 },
+                    ur = { x = 3,  y = 3 },
+                })
+
+                // Supports adjusting both parameters
+                u.assert_deep_equal($bounds:move_to({ x = 5, y = 1 }), {
+                    ll = { x = 5,  y = 1 },
+                    ur = { x = 7,  y = 3 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_shift_by() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        // Supports increases and decreases in position
+        assert_eq!(
+            bounds.shift_by(Mm(4.0), Mm(-1.0)),
+            PdfBounds::from_coords_f32(5.0, 1.0, 7.0, 3.0)
+        );
+
+        // Shifting by 0 should do nothing
+        assert_eq!(
+            bounds.shift_by(Mm(0.0), Mm(0.0)),
+            PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0)
+        );
+    }
+
+    #[test]
+    fn should_support_shift_by_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // Supports adjusting neither parameter
+                u.assert_deep_equal($bounds:shift_by(), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:shift_by({}), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+
+                // Supports adjusting a single parameters
+                u.assert_deep_equal($bounds:shift_by({ x = 4 }), {
+                    ll = { x = 5,  y = 2 },
+                    ur = { x = 7,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:shift_by({ y = -1 }), {
+                    ll = { x = 1,  y = 1 },
+                    ur = { x = 3,  y = 3 },
+                })
+
+                // Supports adjusting both parameters
+                u.assert_deep_equal($bounds:shift_by({ x = 4, y = -1 }), {
+                    ll = { x = 5,  y = 1 },
+                    ur = { x = 7,  y = 3 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_scale_to() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        // Supports scaling to larger and smaller dimensions
+        assert_eq!(
+            bounds.scale_to(Mm(4.0), Mm(1.0)),
+            PdfBounds::from_coords_f32(1.0, 2.0, 5.0, 3.0)
+        );
+
+        // Scaling to the same dimensions should do nothing
+        assert_eq!(
+            bounds.scale_to(bounds.width(), bounds.height()),
+            PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0)
+        );
+    }
+
+    #[test]
+    fn should_support_scale_to_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // Supports adjusting neither parameter
+                u.assert_deep_equal($bounds:scale_to(), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:scale_to({}), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+
+                // Supports adjusting a single parameters
+                u.assert_deep_equal($bounds:scale_to({ width = 4 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 5,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:scale_to({ height = 1 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 3 },
+                })
+
+                // Supports adjusting both parameters
+                u.assert_deep_equal($bounds:scale_to({ width = 4, height = 1 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 5,  y = 3 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_scale_by_factor() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        // Supports scaling to larger and smaller dimensions
+        assert_eq!(
+            bounds.scale_by_factor(2.0, 0.5),
+            PdfBounds::from_coords_f32(1.0, 2.0, 5.0, 3.0)
+        );
+
+        // Scaling by a factor of 1 should do nothing
+        assert_eq!(
+            bounds.scale_by_factor(1.0, 1.0),
+            PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0)
+        );
+    }
+
+    #[test]
+    fn should_support_scale_by_factor_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // Supports adjusting neither parameter
+                u.assert_deep_equal($bounds:scale_by_factor(), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:scale_by_factor({}), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 4 },
+                })
+
+                // Supports adjusting a single parameters
+                u.assert_deep_equal($bounds:scale_by_factor({ width = 2 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 5,  y = 4 },
+                })
+                u.assert_deep_equal($bounds:scale_by_factor({ height = 0.5 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 3,  y = 3 },
+                })
+
+                // Supports adjusting both parameters
+                u.assert_deep_equal($bounds:scale_by_factor({ width = 2, height = 0.5 }), {
+                    ll = { x = 1,  y = 2 },
+                    ur = { x = 5,  y = 3 },
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
 
     #[test]
     fn should_support_aligning_with_another_set_of_bounds() {
