@@ -17,6 +17,25 @@ use std::str::FromStr;
 pub struct PdfDate(NaiveDate);
 
 impl PdfDate {
+    /// Creates a date from a table with necessary fields.
+    pub(crate) fn from_lua_table(table: &LuaTable) -> LuaResult<Self> {
+        // Check if we have the necessary fields to construct a date
+        let year = table.raw_get_ext::<_, Option<i32>>("year")?;
+        let month = table.raw_get_ext::<_, Option<u32>>("month")?;
+        let day = table.raw_get_ext::<_, Option<u32>>("day")?;
+
+        // If our table has year, month, day then we try to convert it
+        if let (Some(year), Some(month), Some(day)) = (year, month, day) {
+            Ok(Self(NaiveDate::from_ymd_opt(year, month, day).ok_or_else(
+                || LuaError::runtime(format!("invalid date: {year}/{month}/{day}")),
+            )?))
+        } else {
+            Err(LuaError::runtime(
+                "missing at least one of the required date fields (year, month, day)",
+            ))
+        }
+    }
+
     /// Returns the year associated with the date.
     ///
     /// Negatives represent BCE. e.g. -309 == 308 BCE.
@@ -258,131 +277,131 @@ impl<'lua> IntoLua<'lua> for PdfDate {
 
         metatable.raw_set(
             "format",
-            lua.create_function(move |_, format: String| {
-                Ok(self.0.format(format.as_str()).to_string())
+            lua.create_function(move |_, (this, format): (PdfDate, String)| {
+                Ok(this.0.format(format.as_str()).to_string())
             })?,
         )?;
 
         metatable.raw_set(
             "add_days",
-            lua.create_function(move |_, days: i64| {
-                self.add_days(days)
+            lua.create_function(move |_, (this, days): (PdfDate, i64)| {
+                this.add_days(days)
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "tomorrow",
-            lua.create_function(move |_, ()| {
-                self.tomorrow()
+            lua.create_function(move |_, this: PdfDate| {
+                this.tomorrow()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "yesterday",
-            lua.create_function(move |_, ()| {
-                self.yesterday()
+            lua.create_function(move |_, this: PdfDate| {
+                this.yesterday()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "add_weeks",
-            lua.create_function(move |_, weeks: i64| {
-                self.add_weeks(weeks)
+            lua.create_function(move |_, (this, weeks): (PdfDate, i64)| {
+                this.add_weeks(weeks)
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "next_week",
-            lua.create_function(move |_, ()| {
-                self.next_week()
+            lua.create_function(move |_, this: PdfDate| {
+                this.next_week()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "last_week",
-            lua.create_function(move |_, ()| {
-                self.last_week()
+            lua.create_function(move |_, this: PdfDate| {
+                this.last_week()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "add_months",
-            lua.create_function(move |_, months: i32| {
-                self.add_months(months)
+            lua.create_function(move |_, (this, months): (PdfDate, i32)| {
+                this.add_months(months)
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "next_month",
-            lua.create_function(move |_, ()| {
-                self.next_month()
+            lua.create_function(move |_, this: PdfDate| {
+                this.next_month()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "last_month",
-            lua.create_function(move |_, ()| {
-                self.last_month()
+            lua.create_function(move |_, this: PdfDate| {
+                this.last_month()
                     .ok_or_else(|| LuaError::runtime("resulting date out of range"))
             })?,
         )?;
 
         metatable.raw_set(
             "beginning_of_year",
-            lua.create_function(move |_, ()| Ok(self.into_beginning_of_year()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_beginning_of_year()))?,
         )?;
 
         metatable.raw_set(
             "end_of_year",
-            lua.create_function(move |_, ()| Ok(self.into_end_of_year()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_end_of_year()))?,
         )?;
 
         metatable.raw_set(
             "beginning_of_month",
-            lua.create_function(move |_, ()| Ok(self.into_beginning_of_month()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_beginning_of_month()))?,
         )?;
 
         metatable.raw_set(
             "end_of_month",
-            lua.create_function(move |_, ()| Ok(self.into_end_of_month()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_end_of_month()))?,
         )?;
 
         metatable.raw_set(
             "beginning_of_week_sunday",
-            lua.create_function(move |_, ()| Ok(self.into_beginning_of_week_sunday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_beginning_of_week_sunday()))?,
         )?;
 
         metatable.raw_set(
             "end_of_week_sunday",
-            lua.create_function(move |_, ()| Ok(self.into_end_of_week_sunday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_end_of_week_sunday()))?,
         )?;
 
         metatable.raw_set(
             "beginning_of_week_monday",
-            lua.create_function(move |_, ()| Ok(self.into_beginning_of_week_monday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_beginning_of_week_monday()))?,
         )?;
 
         metatable.raw_set(
             "end_of_week_monday",
-            lua.create_function(move |_, ()| Ok(self.into_end_of_week_monday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.into_end_of_week_monday()))?,
         )?;
 
         metatable.raw_set(
             "weeks_in_month_sunday",
-            lua.create_function(move |_, ()| Ok(self.weeks_in_month_sunday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.weeks_in_month_sunday()))?,
         )?;
 
         metatable.raw_set(
             "weeks_in_month_monday",
-            lua.create_function(move |_, ()| Ok(self.weeks_in_month_monday()))?,
+            lua.create_function(move |_, this: PdfDate| Ok(this.weeks_in_month_monday()))?,
         )?;
 
         metatable.raw_set(
@@ -398,15 +417,15 @@ impl<'lua> IntoLua<'lua> for PdfDate {
             lua.create_function(|_, (a, b): (PdfDate, PdfDate)| Ok(a.0 <= b.0))?,
         )?;
 
-        // Return copy of the date as a string. As the table is immutable, this shouldn't have any
-        // issue staying current with the date instance.
+        // Return copy of the date as a string.
         metatable.raw_set(
             "__tostring",
-            lua.create_function(move |_, ()| Ok(self.to_string()))?,
+            // NOTE: We have to use `LuaTable` instead of `PdfDate` as leveraging `PdfDate`
+            //       here causes infinite recursion when trying to resolve!
+            lua.create_function(move |_, tbl: LuaTable| {
+                Ok(Self::from_lua_table(&tbl)?.to_string())
+            })?,
         )?;
-
-        // Mark table as read-only to prevent tampering without using specialized methods
-        lua.mark_readonly(table.clone())?;
 
         Ok(LuaValue::Table(table))
     }
@@ -422,20 +441,27 @@ impl<'lua> FromLua<'lua> for PdfDate {
             // For a string, attempt to parse it as a date
             LuaValue::String(s) => Ok(s.to_str()?.parse().map_err(LuaError::external)?),
 
-            // For a table, attempt to convert it to a string and then parse it as a date
-            LuaValue::Table(table) => match table.get_metatable() {
-                Some(metatable) => {
-                    let f = metatable.raw_get_ext::<_, LuaFunction>("__tostring")?;
-                    f.call(table)
+            // For a table, attempt to convert it first from a {year, month, day} and then
+            // if that fails to a string and then parse it as a date
+            LuaValue::Table(table) => {
+                if let Ok(date) = Self::from_lua_table(&table) {
+                    return Ok(date);
                 }
-                None => Err(LuaError::FromLuaConversionError {
-                    from,
-                    to,
-                    message: Some(String::from(
-                        "table does not have __tostring metatable method",
-                    )),
-                }),
-            },
+
+                match table.get_metatable() {
+                    Some(metatable) => {
+                        let f = metatable.raw_get_ext::<_, LuaFunction>("__tostring")?;
+                        f.call(table)
+                    }
+                    None => Err(LuaError::FromLuaConversionError {
+                        from,
+                        to,
+                        message: Some(String::from(
+                            "table does not have __tostring metatable method",
+                        )),
+                    }),
+                }
+            }
 
             // Anything else is invalid as a date
             _ => Err(LuaError::FromLuaConversionError {
@@ -458,7 +484,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.format("%B")))
+                .load(chunk!($date:format("%B")))
                 .eval::<String>()
                 .unwrap(),
             "September",
@@ -472,7 +498,7 @@ mod tests {
         // Test advancing a single day within same month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(1)))
+                .load(chunk!($date:add_days(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 15).unwrap()),
@@ -481,7 +507,7 @@ mod tests {
         // Test backtracking a single day within same month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(-1)))
+                .load(chunk!($date:add_days(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 13).unwrap()),
@@ -490,7 +516,7 @@ mod tests {
         // Test advancing to end of same month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(16)))
+                .load(chunk!($date:add_days(16)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -499,7 +525,7 @@ mod tests {
         // Test backtracking to beginning of same month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(-13)))
+                .load(chunk!($date:add_days(-13)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap()),
@@ -508,7 +534,7 @@ mod tests {
         // Test advancing to next month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(17)))
+                .load(chunk!($date:add_days(17)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap()),
@@ -517,7 +543,7 @@ mod tests {
         // Test backtracking to previous month
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_days(-14)))
+                .load(chunk!($date:add_days(-14)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 8, 31).unwrap()),
@@ -530,7 +556,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(1)))
+                .load(chunk!($date:add_weeks(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 21).unwrap()),
@@ -540,7 +566,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(-1)))
+                .load(chunk!($date:add_weeks(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 7).unwrap()),
@@ -550,7 +576,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 25).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(1)))
+                .load(chunk!($date:add_weeks(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 11, 1).unwrap()),
@@ -560,7 +586,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 7).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(-1)))
+                .load(chunk!($date:add_weeks(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -570,7 +596,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 25).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(1)))
+                .load(chunk!($date:add_weeks(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2025, 1, 1).unwrap()),
@@ -580,7 +606,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 7).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_weeks(-1)))
+                .load(chunk!($date:add_weeks(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2023, 12, 31).unwrap()),
@@ -593,7 +619,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_week()))
+                .load(chunk!($date:next_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 21).unwrap()),
@@ -603,7 +629,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 25).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_week()))
+                .load(chunk!($date:next_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 11, 1).unwrap()),
@@ -613,7 +639,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 25).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_week()))
+                .load(chunk!($date:next_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2025, 1, 1).unwrap()),
@@ -626,7 +652,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_week()))
+                .load(chunk!($date:last_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 7).unwrap()),
@@ -636,7 +662,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 7).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_week()))
+                .load(chunk!($date:last_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -646,7 +672,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 7).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_week()))
+                .load(chunk!($date:last_week()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2023, 12, 31).unwrap()),
@@ -659,7 +685,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(1)))
+                .load(chunk!($date:add_months(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 14).unwrap()),
@@ -669,7 +695,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(-1)))
+                .load(chunk!($date:add_months(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 8, 14).unwrap()),
@@ -679,7 +705,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(1)))
+                .load(chunk!($date:add_months(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 11, 30).unwrap()),
@@ -689,7 +715,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(-1)))
+                .load(chunk!($date:add_months(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -699,7 +725,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 18).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(1)))
+                .load(chunk!($date:add_months(1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2025, 1, 18).unwrap()),
@@ -709,7 +735,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 18).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.add_months(-1)))
+                .load(chunk!($date:add_months(-1)))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2023, 12, 18).unwrap()),
@@ -722,7 +748,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_month()))
+                .load(chunk!($date:next_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 14).unwrap()),
@@ -732,7 +758,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_month()))
+                .load(chunk!($date:next_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 11, 30).unwrap()),
@@ -742,7 +768,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 18).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.next_month()))
+                .load(chunk!($date:next_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2025, 1, 18).unwrap()),
@@ -755,7 +781,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_month()))
+                .load(chunk!($date:last_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 8, 14).unwrap()),
@@ -765,7 +791,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_month()))
+                .load(chunk!($date:last_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -775,7 +801,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 18).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.last_month()))
+                .load(chunk!($date:last_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2023, 12, 18).unwrap()),
@@ -788,7 +814,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.tomorrow()))
+                .load(chunk!($date:tomorrow()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 15).unwrap()),
@@ -798,7 +824,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.tomorrow()))
+                .load(chunk!($date:tomorrow()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap()),
@@ -808,7 +834,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.tomorrow()))
+                .load(chunk!($date:tomorrow()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2025, 1, 1).unwrap()),
@@ -821,7 +847,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.yesterday()))
+                .load(chunk!($date:yesterday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 13).unwrap()),
@@ -831,7 +857,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.yesterday()))
+                .load(chunk!($date:yesterday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -841,7 +867,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.yesterday()))
+                .load(chunk!($date:yesterday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2023, 12, 31).unwrap()),
@@ -854,7 +880,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_year()))
+                .load(chunk!($date:beginning_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
@@ -864,7 +890,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_year()))
+                .load(chunk!($date:beginning_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
@@ -874,7 +900,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_year()))
+                .load(chunk!($date:beginning_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
@@ -887,7 +913,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_year()))
+                .load(chunk!($date:end_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap()),
@@ -897,7 +923,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_year()))
+                .load(chunk!($date:end_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap()),
@@ -907,7 +933,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_year()))
+                .load(chunk!($date:end_of_year()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap()),
@@ -920,7 +946,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_month()))
+                .load(chunk!($date:beginning_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap()),
@@ -930,7 +956,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_month()))
+                .load(chunk!($date:beginning_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap()),
@@ -940,7 +966,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_month()))
+                .load(chunk!($date:beginning_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap()),
@@ -950,7 +976,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_month()))
+                .load(chunk!($date:beginning_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
@@ -960,7 +986,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_month()))
+                .load(chunk!($date:beginning_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 12, 1).unwrap()),
@@ -973,7 +999,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_month()))
+                .load(chunk!($date:end_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -983,7 +1009,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_month()))
+                .load(chunk!($date:end_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -993,7 +1019,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_month()))
+                .load(chunk!($date:end_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -1003,7 +1029,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_month()))
+                .load(chunk!($date:end_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 1, 31).unwrap()),
@@ -1013,7 +1039,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_month()))
+                .load(chunk!($date:end_of_month()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 12, 31).unwrap()),
@@ -1026,7 +1052,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_sunday()))
+                .load(chunk!($date:beginning_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap()),
@@ -1036,7 +1062,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_sunday()))
+                .load(chunk!($date:beginning_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap()),
@@ -1046,7 +1072,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_sunday()))
+                .load(chunk!($date:beginning_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap()),
@@ -1056,7 +1082,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_sunday()))
+                .load(chunk!($date:beginning_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap()),
@@ -1066,7 +1092,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_sunday()))
+                .load(chunk!($date:beginning_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 29).unwrap()),
@@ -1079,7 +1105,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_sunday()))
+                .load(chunk!($date:end_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap()),
@@ -1089,7 +1115,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_sunday()))
+                .load(chunk!($date:end_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap()),
@@ -1099,7 +1125,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_sunday()))
+                .load(chunk!($date:end_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap()),
@@ -1109,7 +1135,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_sunday()))
+                .load(chunk!($date:end_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap()),
@@ -1119,7 +1145,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_sunday()))
+                .load(chunk!($date:end_of_week_sunday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 5).unwrap()),
@@ -1132,7 +1158,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_monday()))
+                .load(chunk!($date:beginning_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 2).unwrap()),
@@ -1142,7 +1168,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_monday()))
+                .load(chunk!($date:beginning_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap()),
@@ -1152,7 +1178,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_monday()))
+                .load(chunk!($date:beginning_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap()),
@@ -1162,7 +1188,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_monday()))
+                .load(chunk!($date:beginning_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap()),
@@ -1172,7 +1198,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.beginning_of_week_monday()))
+                .load(chunk!($date:beginning_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()),
@@ -1185,7 +1211,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_monday()))
+                .load(chunk!($date:end_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 8).unwrap()),
@@ -1195,7 +1221,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 9).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_monday()))
+                .load(chunk!($date:end_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 15).unwrap()),
@@ -1205,7 +1231,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_monday()))
+                .load(chunk!($date:end_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 15).unwrap()),
@@ -1215,7 +1241,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 14).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_monday()))
+                .load(chunk!($date:end_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 9, 15).unwrap()),
@@ -1225,7 +1251,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2024, 9, 30).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.end_of_week_monday()))
+                .load(chunk!($date:end_of_week_monday()))
                 .eval::<PdfDate>()
                 .unwrap(),
             PdfDate(NaiveDate::from_ymd_opt(2024, 10, 6).unwrap()),
@@ -1238,7 +1264,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2015, 2, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_sunday()))
+                .load(chunk!($date:weeks_in_month_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             4
@@ -1248,7 +1274,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2015, 3, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_sunday()))
+                .load(chunk!($date:weeks_in_month_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             5
@@ -1258,7 +1284,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2021, 10, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_sunday()))
+                .load(chunk!($date:weeks_in_month_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             6
@@ -1271,7 +1297,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2021, 2, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_monday()))
+                .load(chunk!($date:weeks_in_month_monday()))
                 .eval::<u8>()
                 .unwrap(),
             4
@@ -1281,7 +1307,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2021, 3, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_monday()))
+                .load(chunk!($date:weeks_in_month_monday()))
                 .eval::<u8>()
                 .unwrap(),
             5
@@ -1291,7 +1317,7 @@ mod tests {
         let date = PdfDate(NaiveDate::from_ymd_opt(2021, 5, 10).unwrap());
         assert_eq!(
             Lua::new()
-                .load(chunk!($date.weeks_in_month_monday()))
+                .load(chunk!($date:weeks_in_month_monday()))
                 .eval::<u8>()
                 .unwrap(),
             6

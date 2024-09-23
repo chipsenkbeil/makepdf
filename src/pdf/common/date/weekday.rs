@@ -126,47 +126,53 @@ impl<'lua> IntoLua<'lua> for PdfDateWeekday {
 
         metatable.raw_set(
             "short_name",
-            lua.create_function(move |_, ()| Ok(self.into_short_static_str().to_string()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| {
+                Ok(this.into_short_static_str().to_string())
+            })?,
         )?;
 
         metatable.raw_set(
             "long_name",
-            lua.create_function(move |_, ()| Ok(self.into_long_static_str().to_string()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| {
+                Ok(this.into_long_static_str().to_string())
+            })?,
         )?;
 
         metatable.raw_set(
             "next_weekday",
-            lua.create_function(move |_, ()| Ok(Self(self.0.succ())))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(Self(this.0.succ())))?,
         )?;
 
         metatable.raw_set(
             "prev_weekday",
-            lua.create_function(move |_, ()| Ok(Self(self.0.pred())))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(Self(this.0.pred())))?,
         )?;
 
         metatable.raw_set(
             "number_from_monday",
-            lua.create_function(move |_, ()| Ok(self.0.number_from_monday()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(this.0.number_from_monday()))?,
         )?;
 
         metatable.raw_set(
             "number_from_sunday",
-            lua.create_function(move |_, ()| Ok(self.0.number_from_sunday()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(this.0.number_from_sunday()))?,
         )?;
 
         metatable.raw_set(
             "num_days_from_monday",
-            lua.create_function(move |_, ()| Ok(self.0.num_days_from_monday()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(this.0.num_days_from_monday()))?,
         )?;
 
         metatable.raw_set(
             "num_days_from_sunday",
-            lua.create_function(move |_, ()| Ok(self.0.num_days_from_sunday()))?,
+            lua.create_function(move |_, this: PdfDateWeekday| Ok(this.0.num_days_from_sunday()))?,
         )?;
 
         metatable.raw_set(
             "days_since",
-            lua.create_function(move |_, other: PdfDateWeekday| Ok(self.0.days_since(other.0)))?,
+            lua.create_function(move |_, (this, other): (PdfDateWeekday, PdfDateWeekday)| {
+                Ok(this.0.days_since(other.0))
+            })?,
         )?;
 
         metatable.raw_set(
@@ -176,11 +182,11 @@ impl<'lua> IntoLua<'lua> for PdfDateWeekday {
 
         metatable.raw_set(
             "__tostring",
+            // NOTE: We explicitly don't leverage `this` because it causes a recursion issue. Since
+            //       there are no fields within the table (so you cannot change the weekday without
+            //       methods), we can instead use self from above.
             lua.create_function(move |_, ()| Ok(self.to_string()))?,
         )?;
-
-        // Mark table as read-only to prevent tampering without using specialized methods
-        lua.mark_readonly(table.clone())?;
 
         Ok(LuaValue::Table(table))
     }
@@ -230,7 +236,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.short_name()))
+                .load(chunk!($weekday:short_name()))
                 .eval::<String>()
                 .unwrap(),
             "mon"
@@ -242,7 +248,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.long_name()))
+                .load(chunk!($weekday:long_name()))
                 .eval::<String>()
                 .unwrap(),
             "monday"
@@ -254,7 +260,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.next_weekday()))
+                .load(chunk!($weekday:next_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::tuesday()
@@ -263,7 +269,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.next_weekday()))
+                .load(chunk!($weekday:next_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::sunday()
@@ -272,7 +278,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.next_weekday()))
+                .load(chunk!($weekday:next_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::monday()
@@ -284,7 +290,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.prev_weekday()))
+                .load(chunk!($weekday:prev_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::sunday()
@@ -293,7 +299,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.prev_weekday()))
+                .load(chunk!($weekday:prev_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::friday()
@@ -302,7 +308,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.prev_weekday()))
+                .load(chunk!($weekday:prev_weekday()))
                 .eval::<PdfDateWeekday>()
                 .unwrap(),
             PdfDateWeekday::saturday()
@@ -314,7 +320,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_monday()))
+                .load(chunk!($weekday:number_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             1
@@ -323,7 +329,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_monday()))
+                .load(chunk!($weekday:number_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             6
@@ -332,7 +338,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_monday()))
+                .load(chunk!($weekday:number_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             7
@@ -344,7 +350,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_sunday()))
+                .load(chunk!($weekday:number_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             2
@@ -353,7 +359,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_sunday()))
+                .load(chunk!($weekday:number_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             7
@@ -362,7 +368,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.number_from_sunday()))
+                .load(chunk!($weekday:number_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             1
@@ -374,7 +380,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_monday()))
+                .load(chunk!($weekday:num_days_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             0
@@ -383,7 +389,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_monday()))
+                .load(chunk!($weekday:num_days_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             5
@@ -392,7 +398,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_monday()))
+                .load(chunk!($weekday:num_days_from_monday()))
                 .eval::<u8>()
                 .unwrap(),
             6
@@ -404,7 +410,7 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_sunday()))
+                .load(chunk!($weekday:num_days_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             1
@@ -413,7 +419,7 @@ mod tests {
         let weekday = PdfDateWeekday::saturday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_sunday()))
+                .load(chunk!($weekday:num_days_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             6
@@ -422,7 +428,7 @@ mod tests {
         let weekday = PdfDateWeekday::sunday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.num_days_from_sunday()))
+                .load(chunk!($weekday:num_days_from_sunday()))
                 .eval::<u8>()
                 .unwrap(),
             0
@@ -434,21 +440,21 @@ mod tests {
         let weekday = PdfDateWeekday::monday();
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.days_since("monday")))
+                .load(chunk!($weekday:days_since("monday")))
                 .eval::<u8>()
                 .unwrap(),
             0
         );
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.days_since("tuesday")))
+                .load(chunk!($weekday:days_since("tuesday")))
                 .eval::<u8>()
                 .unwrap(),
             6
         );
         assert_eq!(
             Lua::new()
-                .load(chunk!($weekday.days_since("sunday")))
+                .load(chunk!($weekday:days_since("sunday")))
                 .eval::<u8>()
                 .unwrap(),
             1
