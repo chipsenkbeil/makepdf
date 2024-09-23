@@ -64,7 +64,28 @@ function pdf.object.calendar(tbl)
 
     -- Text color for text placed on top of filled rects
     local fill_color = tbl.fill_color or pdf.page.fill_color
-    local text_color = tbl.text_color or "#FFFFFF"
+    local text_color = tbl.text_color
+
+    -- Determine default text color by lightness
+    if not text_color then
+        -- Check the fill color to determine what to use for text color
+        local color = pdf.utils.color(fill_color)
+        if color:is_light() then
+            text_color = "#000000"
+        else
+            text_color = "#FFFFFF"
+        end
+    end
+
+    -- Create a fill color for an invalid block in the calendar
+    local invalid_fill_color = pdf.utils.color(fill_color)
+    if invalid_fill_color:is_light() then
+        local lum_left = 1.0 - invalid_fill_color:luminance()
+        invalid_fill_color = invalid_fill_color:darken(lum_left * 0.5)
+    else
+        local lum_left = 1.0 - invalid_fill_color:luminance()
+        invalid_fill_color = invalid_fill_color:lighten(lum_left * 0.5)
+    end
 
     -- Create a grid of 7 columns (7 days) and 13 rows to fit the header plus
     -- enough rows (6 x 2 height) to handle all month variations
@@ -126,6 +147,15 @@ function pdf.object.calendar(tbl)
     -- Build our 7 x 6 grid of calendar days
     for week_of_month = 1, 6 do
         for day_of_week = 1, 7 do
+            -- Check if the day on the calendar is within our expected range,
+            -- and if so display the date on the block, otherwise show nothing
+            --
+            -- We start with Sunday in our calendar!
+            local is_valid_block =
+                (week_of_month == 1 and day_of_week >= month_start_day_of_week)
+                or (week_of_month == weeks_in_month and day_of_week <= month_end_day_of_week)
+                or (week_of_month > 1 and week_of_month < weeks_in_month)
+
             -- Create the container block for the day
             local block = cell_rect_text({
                 row = week_of_month * 2,
@@ -133,19 +163,14 @@ function pdf.object.calendar(tbl)
                 height = 2,
             }, {
                 rect = {
+                    fill_color = is_valid_block and fill_color or invalid_fill_color,
                     outline_color = fill_color,
-                    mode = "stroke",
+                    mode = is_valid_block and "stroke" or "fill_stroke",
                 }
             })
             table.insert(objects, block)
 
-            -- Check if the day on the calendar is within our expected range,
-            -- and if so display the date on the block, otherwise show nothing
-            --
-            -- We start with Sunday in our calendar!
-            if (week_of_month == 1 and day_of_week >= month_start_day_of_week)
-                or (week_of_month == weeks_in_month and day_of_week <= month_end_day_of_week)
-                or (week_of_month > 1 and week_of_month < weeks_in_month) then
+            if is_valid_block then
                 local bounds = block:bounds()
                 local ll = bounds.ll
                 local ur = bounds.ur
