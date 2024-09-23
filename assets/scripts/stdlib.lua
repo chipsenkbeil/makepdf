@@ -49,7 +49,7 @@ end
 ---Creates a calendar-like object for the specified `month` that fits into `bounds`.
 ---
 ---Calendar starts with Sunday as first day of the week.
----@param tbl {bounds:pdf.common.Bounds, month:pdf.common.Date, fill_color?:pdf.common.Color, text_color?:pdf.common.Color}
+---@param tbl {bounds:pdf.common.Bounds, month:pdf.common.Date, fill_color?:pdf.common.ColorLike, text_color?:pdf.common.ColorLike}
 ---@return pdf.object.Group
 function pdf.object.calendar(tbl)
     ---@type pdf.Object[]

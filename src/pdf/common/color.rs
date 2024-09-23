@@ -1,4 +1,4 @@
-use crate::pdf::PdfLuaTableExt;
+use crate::pdf::{PdfLuaExt, PdfLuaTableExt};
 use mlua::prelude::*;
 use palette::Srgb;
 use std::fmt;
@@ -18,6 +18,17 @@ impl PdfColor {
     /// Produces color from RGB where each value is between 0 and 255.
     pub fn from_rgb_u8(red: u8, green: u8, blue: u8) -> Self {
         Self(Srgb::new(red, green, blue).into())
+    }
+
+    /// Returns the color as (red, green, blue) float tuple.
+    pub fn into_colors_f32(self) -> (f32, f32, f32) {
+        (self.0.red, self.0.green, self.0.blue)
+    }
+
+    /// Returns the color as (red, green, blue) byte tuple.
+    pub fn into_colors_u8(self) -> (u8, u8, u8) {
+        let inner: Srgb<u8> = self.0.into();
+        (inner.red, inner.green, inner.blue)
     }
 
     /// Produces a traditional black color.
@@ -102,8 +113,21 @@ impl From<PdfColor> for printpdf::Color {
 impl<'lua> IntoLua<'lua> for PdfColor {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        lua.create_string(format!("{:X}", Srgb::<u8>::from(self.0)))
-            .map(LuaValue::String)
+        let (table, metatable) = lua.create_table_ext()?;
+
+        // Store fields as u8, not float
+        let (red, green, blue) = self.into_colors_u8();
+        table.raw_set("red", red)?;
+        table.raw_set("green", green)?;
+        table.raw_set("blue", blue)?;
+
+        // Return copy of the color as a hex string.
+        metatable.raw_set(
+            "__tostring",
+            lua.create_function(|_, this: PdfColor| Ok(this.to_string()))?,
+        )?;
+
+        Ok(LuaValue::Table(table))
     }
 }
 
@@ -126,11 +150,18 @@ impl<'lua> FromLua<'lua> for PdfColor {
                     }
                 }
 
-                // Otherwise, look for r, g, b fields
+                let get_field = |long_name: &str, short_name: &str| match table
+                    .raw_get_ext::<_, Option<u8>>(short_name)?
+                {
+                    Some(value) => Ok(value),
+                    None => table.raw_get_ext::<_, u8>(long_name),
+                };
+
+                // Otherwise, look for red, green, blue fields
                 Ok(Self::from_rgb_u8(
-                    table.raw_get_ext("r")?,
-                    table.raw_get_ext("g")?,
-                    table.raw_get_ext("b")?,
+                    get_field("red", "r")?,
+                    get_field("green", "g")?,
+                    get_field("blue", "b")?,
                 ))
             }
             _ => Err(LuaError::FromLuaConversionError {
@@ -147,6 +178,19 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_convert_to_string_in_lua() {
+        let color = PdfColor::from_rgb_u8(0, 128, 255);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(tostring($color), "0080FF")
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_convert_from_lua() {
@@ -196,6 +240,15 @@ mod tests {
                 .unwrap(),
             color,
         );
+
+        // Can convert { red:number, green:number, blue:number } (u8) into color
+        assert_eq!(
+            Lua::new()
+                .load(chunk!({ red = 0, green = 128, blue = 255 }))
+                .eval::<PdfColor>()
+                .unwrap(),
+            color,
+        );
     }
 
     #[test]
@@ -205,7 +258,11 @@ mod tests {
         Lua::new()
             .load(chunk! {
                 local u = $PdfUtils
-                u.assert_deep_equal($color, "0080FF")
+                u.assert_deep_equal($color, {
+                    red = 0,
+                    green = 128,
+                    blue = 255,
+                })
             })
             .exec()
             .expect("Assertion failed");
