@@ -31,6 +31,37 @@ impl PdfColor {
         (inner.red, inner.green, inner.blue)
     }
 
+    /// Returns the luminance (brightness of the color) as a value between 0 and 1.
+    ///
+    /// This uses weighted red/green/blue values with
+    /// `L = 0.2126 * R + 0.7152 * G + 0.0722 * B`.
+    #[inline]
+    pub fn into_luminance(self) -> f32 {
+        0.2126 * self.red + 0.7152 * self.green + 0.0722 * self.blue
+    }
+
+    /// Returns true if the color is considered light, meaning luminance is greater than `0.5`.
+    #[inline]
+    pub fn is_light(self) -> bool {
+        self.into_luminance() > 0.5
+    }
+
+    /// Consumes the color, returning a new variant lightened by `percentage`.
+    pub fn lighten(mut self, percentage: f32) -> Self {
+        self.red = (self.red + (1.0 - self.red) * percentage).min(1.0);
+        self.green = (self.green + (1.0 - self.green) * percentage).min(1.0);
+        self.blue = (self.blue + (1.0 - self.blue) * percentage).min(1.0);
+        self
+    }
+
+    /// Consumes the color, returning a new variant darkened by `percentage`.
+    pub fn darken(mut self, percentage: f32) -> Self {
+        self.red = (self.red * (1.0 - percentage)).max(0.0);
+        self.green = (self.green * (1.0 - percentage)).max(0.0);
+        self.blue = (self.blue * (1.0 - percentage)).max(0.0);
+        self
+    }
+
     /// Produces a traditional black color.
     #[inline]
     pub const fn black() -> Self {
@@ -121,6 +152,30 @@ impl<'lua> IntoLua<'lua> for PdfColor {
         table.raw_set("green", green)?;
         table.raw_set("blue", blue)?;
 
+        metatable.raw_set(
+            "luminance",
+            lua.create_function(|_, this: PdfColor| Ok(this.into_luminance()))?,
+        )?;
+
+        metatable.raw_set(
+            "is_light",
+            lua.create_function(|_, this: PdfColor| Ok(this.is_light()))?,
+        )?;
+
+        metatable.raw_set(
+            "lighten",
+            lua.create_function(|_, (this, percentage): (PdfColor, f32)| {
+                Ok(this.lighten(percentage))
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "darken",
+            lua.create_function(|_, (this, percentage): (PdfColor, f32)| {
+                Ok(this.darken(percentage))
+            })?,
+        )?;
+
         // Return copy of the color as a hex string.
         metatable.raw_set(
             "__tostring",
@@ -178,6 +233,98 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_calculate_luminance_approximation() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200);
+        assert_eq!(color.into_luminance(), 0.51901966);
+    }
+
+    #[test]
+    fn should_be_able_to_calculate_luminance_approximation_in_lua() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                local luminance = $color:luminance()
+                u.assert_deep_equal(math.floor(luminance * 1000), 519)
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_determine_if_is_light() {
+        // Green is weighted highest, so high green factors to make luminance high
+        let color = PdfColor::from_rgb_u8(50, 150, 200);
+        assert!(color.is_light());
+
+        // Green is weighted highest, so no green makes luminance too low
+        let color = PdfColor::from_rgb_u8(50, 0, 200);
+        assert!(!color.is_light());
+    }
+
+    #[test]
+    fn should_be_able_to_determine_if_is_light_in_lua() {
+        let light_color = PdfColor::from_rgb_u8(50, 150, 200);
+        let dark_color = PdfColor::from_rgb_u8(50, 0, 200);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($light_color:is_light(), true)
+                u.assert_deep_equal($dark_color:is_light(), false)
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_lighten() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200).lighten(0.2);
+        assert_eq!(color.into_colors_u8(), (91, 171, 211));
+    }
+
+    #[test]
+    fn should_be_able_to_lighten_in_lua() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($color:lighten(0.2), {
+                    red = 91,       // +20% of 205 remaining
+                    green = 171,    // +20% of 105 remaining
+                    blue = 211,     // +20% of 55 remaining
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_be_able_to_darken() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200).darken(0.2);
+        assert_eq!(color.into_colors_u8(), (40, 120, 160));
+    }
+
+    #[test]
+    fn should_be_able_to_darken_in_lua() {
+        let color = PdfColor::from_rgb_u8(50, 150, 200);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($color:darken(0.2), {
+                    red = 40,       // -20% of 50
+                    green = 120,    // -20% of 150
+                    blue = 160,     // -20% of 200
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
 
     #[test]
     fn should_be_able_to_convert_to_string_in_lua() {
