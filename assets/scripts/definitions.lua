@@ -827,10 +827,15 @@ function pdf.utils.assert_deep_equal(a, b, opts) end
 ---@param opts? {ignore_metatable:boolean|nil}
 function pdf.utils.assert_not_deep_equal(a, b, opts) end
 
----Creates a bounds instance from the provided table, or throws an error if invalid.
----@param tbl table
+---Creates a bounds instance, or throws an error if invalid.
+---@param tbl pdf.common.BoundsLike
 ---@return pdf.common.Bounds
 function pdf.utils.bounds(tbl) end
+
+---Creates a color instance, or throws an error if invalid.
+---@param tbl pdf.common.ColorLike
+---@return pdf.common.Color
+function pdf.utils.color(tbl) end
 
 ---Checks if two values are deeply equal, which involves recursively
 ---traversing tables.
