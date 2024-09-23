@@ -95,21 +95,21 @@ pdf.planner = {
 ---| {type:"goto", page:integer}
 ---| {type:"uri", uri:string}
 
----@alias pdf.common.LinkArg
+---@alias pdf.common.LinkLike
 ---| integer #representing a page's id
 ---| string #representing a URI
 ---| pdf.common.Link
 
----@alias pdf.common.PointArg
+---@alias pdf.common.PointLike
 ---| pdf.common.Point
 ---| {[1]:number, [2]:number}
 
----@alias pdf.common.BoundsArg
+---@alias pdf.common.BoundsLike
 ---| pdf.common.Bounds
 ---| {[1]:{[1]:number, [2]:number}, [2]:{[1]:number, [2]:number}}
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
 
----@alias pdf.common.PaddingArg
+---@alias pdf.common.PaddingLike
 ---| {top?:number, right?:number, bottom?:number, left?:number}
 ---| {[1]:number, [2]:number, [3]:number, [4]:number}
 ---| {[1]:number, [2]:number, [3]:number}
@@ -139,7 +139,7 @@ function PdfBounds:align_to(bounds, align) end
 ---Returns a copy of bounds with padding applied.
 ---
 ---All padding fields are optional and default to 0.
----@param padding? pdf.common.PaddingArg
+---@param padding? pdf.common.PaddingLike
 ---@return pdf.common.Bounds
 function PdfBounds:with_padding(padding) end
 
@@ -474,16 +474,16 @@ function PdfObjectGroup:align_to(bounds, align) end
 ---@return pdf.common.Bounds
 function PdfObjectGroup:bounds() end
 
----@class pdf.object.GroupArgs
+---@class pdf.object.GroupLike
 ---@field [number] pdf.Object
-local PdfObjectGroupArgs = {
-    ---@type pdf.common.LinkArg|nil
+local PdfObjectGroupLike = {
+    ---@type pdf.common.LinkLike|nil
     link = nil,
 }
 
 ---Creates a new group object.
 ---
----@param tbl pdf.object.GroupArgs
+---@param tbl pdf.object.GroupLike
 ---@return pdf.object.Group
 function pdf.object.group(tbl) end
 
@@ -516,9 +516,9 @@ function PdfObjectLine:align_to(bounds, align) end
 ---@return pdf.common.Bounds
 function PdfObjectLine:bounds() end
 
----@class pdf.object.LineArgs
----@field [number] pdf.common.PointArg
-local PdfObjectLineArgs = {
+---@class pdf.object.LineLike
+---@field [number] pdf.common.PointLike
+local PdfObjectLineLike = {
     ---@type integer|nil
     depth = nil,
     ---@type pdf.common.ColorLike|nil
@@ -527,13 +527,13 @@ local PdfObjectLineArgs = {
     thickness = nil,
     ---@type pdf.object.line.Style|nil
     style = nil,
-    ---@type pdf.common.LinkArg|nil
+    ---@type pdf.common.LinkLike|nil
     link = nil,
 }
 
 ---Creates a new line object.
 ---
----@param tbl pdf.object.LineArgs
+---@param tbl pdf.object.LineLike
 ---@return pdf.object.Line
 function pdf.object.line(tbl) end
 
@@ -568,7 +568,7 @@ local PdfObjectRect = {
 function PdfObjectRect:align_to(bounds, align) end
 
 ---Returns a copy of the rect with new bounds.
----@param bounds? pdf.common.BoundsArg
+---@param bounds? pdf.common.BoundsLike
 ---@return pdf.object.Rect
 function PdfObjectRect:with_bounds(bounds) end
 
@@ -576,8 +576,8 @@ function PdfObjectRect:with_bounds(bounds) end
 ---@return pdf.common.Bounds
 function PdfObjectRect:bounds() end
 
----@class pdf.object.RectArgsBase
-local PdfObjectRectArgsBase = {
+---@class pdf.object.RectLikeBase
+local PdfObjectRectLikeBase = {
     ---@type integer|nil
     depth = nil,
     ---@type pdf.common.ColorLike|nil
@@ -590,33 +590,33 @@ local PdfObjectRectArgsBase = {
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
     order = nil,
-    ---@type pdf.common.LinkArg|nil
+    ---@type pdf.common.LinkLike|nil
     link = nil,
 }
 
----@class pdf.object.RectArgs1: pdf.object.RectArgsBase
+---@class pdf.object.RectLike1: pdf.object.RectLikeBase
 ---@field ll {x:number, y:number}
 ---@field ur {x:number, y:number}
 
----@class pdf.object.RectArgs2: pdf.object.RectArgsBase
+---@class pdf.object.RectLike2: pdf.object.RectLikeBase
 ---@field [1] {[1]:number, [2]:number}
 ---@field [2] {[1]:number, [2]:number}
 
----@class pdf.object.RectArgs3: pdf.object.RectArgsBase
+---@class pdf.object.RectLike3: pdf.object.RectLikeBase
 ---@field [1] number
 ---@field [2] number
 ---@field [3] number
 ---@field [4] number
 
----@alias pdf.object.RectArgs
----| pdf.object.RectArgs1
----| pdf.object.RectArgs2
----| pdf.object.RectArgs3
----| pdf.object.RectArgsBase
+---@alias pdf.object.RectLike
+---| pdf.object.RectLike1
+---| pdf.object.RectLike2
+---| pdf.object.RectLike3
+---| pdf.object.RectLikeBase
 
 ---Creates a new rect object.
 ---
----@param tbl pdf.object.RectArgs
+---@param tbl pdf.object.RectLike
 ---@return pdf.object.Rect
 function pdf.object.rect(tbl) end
 
@@ -651,9 +651,9 @@ function PdfObjectShape:align_to(bounds, align) end
 ---@return pdf.common.Bounds
 function PdfObjectShape:bounds() end
 
----@class pdf.object.ShapeArgs
----@field [number] pdf.common.PointArg
-local PdfObjectShapeArgs = {
+---@class pdf.object.ShapeLike
+---@field [number] pdf.common.PointLike
+local PdfObjectShapeLike = {
     ---@type integer|nil
     depth = nil,
     ---@type pdf.common.ColorLike|nil
@@ -666,13 +666,13 @@ local PdfObjectShapeArgs = {
     mode = nil,
     ---@type pdf.common.WindingOrder|nil
     order = nil,
-    ---@type pdf.common.LinkArg|nil
+    ---@type pdf.common.LinkLike|nil
     link = nil,
 }
 
 ---Creates a new shape object.
 ---
----@param tbl pdf.object.ShapeArgs
+---@param tbl pdf.object.ShapeLike
 ---@return pdf.object.Shape
 function pdf.object.shape(tbl) end
 
@@ -713,8 +713,8 @@ function PdfObjectText:align_to(bounds, align) end
 ---@return pdf.common.Bounds
 function PdfObjectText:bounds() end
 
----@class pdf.object.TextArgsBase
-local PdfObjectTextArgsBase = {
+---@class pdf.object.TextLikeBase
+local PdfObjectTextLikeBase = {
     ---@type string
     text = "",
     ---@type integer|nil
@@ -725,30 +725,30 @@ local PdfObjectTextArgsBase = {
     size = nil,
     ---@type pdf.common.ColorLike|nil
     color = nil,
-    ---@type pdf.common.LinkArg|nil
+    ---@type pdf.common.LinkLike|nil
     link = nil,
 }
 
----@class pdf.object.TextArgs1: pdf.object.TextArgsBase
+---@class pdf.object.TextLike1: pdf.object.TextLikeBase
 ---@field x number
 ---@field y number
 
----@class pdf.object.TextArgs2: pdf.object.TextArgsBase
+---@class pdf.object.TextLike2: pdf.object.TextLikeBase
 ---@field [1] number
 ---@field [2] number
 
----@class pdf.object.TextArgs3: pdf.object.TextArgsBase
+---@class pdf.object.TextLike3: pdf.object.TextLikeBase
 ---@field [1] {[1]:number, [2]:number}
 
----@alias pdf.object.TextArgs
----| pdf.object.TextArgs1
----| pdf.object.TextArgs2
----| pdf.object.TextArgs3
----| pdf.object.TextArgsBase
+---@alias pdf.object.TextLike
+---| pdf.object.TextLike1
+---| pdf.object.TextLike2
+---| pdf.object.TextLike3
+---| pdf.object.TextLikeBase
 
 ---Creates a new text object.
 ---
----@param tbl pdf.object.TextArgs
+---@param tbl pdf.object.TextLike
 ---@return pdf.object.Text
 function pdf.object.text(tbl) end
 
