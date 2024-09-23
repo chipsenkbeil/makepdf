@@ -1,5 +1,6 @@
 use crate::pdf::{PdfBounds, PdfLuaExt};
 use mlua::prelude::*;
+use printpdf::{Mm, Pt};
 use tailcall::tailcall;
 
 /// Collection of utility functions.
@@ -29,6 +30,24 @@ impl PdfUtils {
                 value.as_bytes().ends_with(prefix.as_bytes())
             }
             _ => false,
+        }
+    }
+
+    /// Converts a numeric point to millimeters.
+    pub fn pt_to_mm(pt: LuaValue) -> LuaResult<f32> {
+        match pt {
+            LuaValue::Integer(value) => Ok(Mm::from(Pt(value as f32)).0),
+            LuaValue::Number(value) => Ok(Mm::from(Pt(value as f32)).0),
+            _ => Err(LuaError::runtime("value not numeric")),
+        }
+    }
+
+    /// Converts numeric millimeters to a point.
+    pub fn mm_to_pt(mm: LuaValue) -> LuaResult<f32> {
+        match mm {
+            LuaValue::Integer(value) => Ok(Mm(value as f32).into_pt().0),
+            LuaValue::Number(value) => Ok(Mm(value as f32).into_pt().0),
+            _ => Err(LuaError::runtime("value not numeric")),
         }
     }
 
@@ -186,6 +205,16 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             })?,
         )?;
 
+        metatable.raw_set(
+            "mm_to_pt",
+            lua.create_function(|_, value: LuaValue| PdfUtils::mm_to_pt(value))?,
+        )?;
+
+        metatable.raw_set(
+            "pt_to_mm",
+            lua.create_function(|_, value: LuaValue| PdfUtils::pt_to_mm(value))?,
+        )?;
+
         Ok(LuaValue::Table(table))
     }
 }
@@ -305,6 +334,36 @@ mod tests {
                 assert(not u.ends_with("abc", 1))
                 assert(not u.ends_with(1, "abc"))
 
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_millimeters_to_point() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // NOTE: We do some shortening because the calculations are approximate
+                local expected = 2.8346
+                local actual = math.floor(u.mm_to_pt(10000)) / 10000
+                u.assert_deep_equal(expected, actual)
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_point_to_millimeters() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+
+                // NOTE: We do some shortening because the calculations are approximate
+                local expected = 0.3527
+                local actual = math.floor(u.pt_to_mm(10000)) / 10000
+                u.assert_deep_equal(expected, actual)
             })
             .exec()
             .expect("Assertion failed");
