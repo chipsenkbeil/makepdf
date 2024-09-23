@@ -203,6 +203,24 @@ PdfColor.green = 0
 ---@type integer
 PdfColor.blue = 0
 
+---Returns the luminance (brightness of the color) as a value between 0 and 1.
+---@return number
+function PdfColor:luminance() end
+
+---Returns true if the color is considered light (luminance > 0.5).
+---@return boolean
+function PdfColor:is_light() end
+
+---Returns a new color variant lightened by `percentage`.
+---@param percentage number
+---@return pdf.common.Color
+function PdfColor:lighten(percentage) end
+
+---Returns a new color variant darkend by `percentage`.
+---@param percentage number
+---@return pdf.common.Color
+function PdfColor:darken(percentage) end
+
 ---Converts color into a hex string.
 ---@return string
 function PdfColor:__tostring() end
