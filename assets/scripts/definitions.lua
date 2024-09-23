@@ -117,6 +117,14 @@ pdf.planner = {
 ---@field ur pdf.common.Point
 local PdfBounds = {}
 
+---Calculates and returns the lower-right point of the bounds.
+---@return pdf.common.Point
+function PdfBounds:lr() end
+
+---Calculates and returns the upper-left point of the bounds.
+---@return pdf.common.Point
+function PdfBounds:ul() end
+
 ---Aligns these bounds to the provided bounds, returning an updated bounds.
 ---@param bounds pdf.common.Bounds
 ---@param align pdf.common.Align
@@ -531,6 +539,11 @@ local PdfObjectRect = {
 ---@param align pdf.common.Align
 ---@return pdf.object.Rect
 function PdfObjectRect:align_to(bounds, align) end
+
+---Returns a copy of the rect with new bounds.
+---@param bounds? pdf.common.BoundsArg
+---@return pdf.object.Rect
+function PdfObjectRect:with_bounds(bounds) end
 
 ---Returns the bounds of the rect.
 ---@return pdf.common.Bounds

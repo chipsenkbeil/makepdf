@@ -49,6 +49,18 @@ impl PdfBounds {
         }
     }
 
+    /// Returns a point representing the upper-left point of the bounds.
+    #[inline]
+    pub fn to_ul_point(&self) -> PdfPoint {
+        PdfPoint::new(self.ll.x, self.ur.y)
+    }
+
+    /// Returns a point representing the lower-right point of the bounds.
+    #[inline]
+    pub fn to_lr_point(&self) -> PdfPoint {
+        PdfPoint::new(self.ur.x, self.ll.y)
+    }
+
     /// Converts coordinates into bounds.
     #[inline]
     pub const fn from_coords(llx: Mm, lly: Mm, urx: Mm, ury: Mm) -> Self {
@@ -171,6 +183,16 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
         let (table, metatable) = lua.create_table_ext()?;
 
         self.add_to_table(&table)?;
+
+        metatable.raw_set(
+            "lr",
+            lua.create_function(move |_, this: Self| Ok(this.to_lr_point()))?,
+        )?;
+
+        metatable.raw_set(
+            "ul",
+            lua.create_function(move |_, this: Self| Ok(this.to_ul_point()))?,
+        )?;
 
         metatable.raw_set(
             "align_to",
@@ -356,6 +378,44 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_support_retrieving_upper_left_point() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(bounds.to_ul_point(), PdfPoint::from_coords_f32(1.0, 4.0));
+    }
+
+    #[test]
+    fn should_support_retrieving_upper_left_point_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($bounds:ul(), { x = 1.0,  y = 4.0 })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_retrieving_lower_right_point() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(bounds.to_lr_point(), PdfPoint::from_coords_f32(3.0, 2.0));
+    }
+
+    #[test]
+    fn should_support_retrieving_lower_right_point_in_lua() {
+        let bounds = PdfBounds::from_coords_f32(1.0, 2.0, 3.0, 4.0);
+
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal($bounds:lr(), { x = 3.0,  y = 2.0 })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
 
     #[test]
     fn should_support_with_padding() {
