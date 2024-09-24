@@ -6,15 +6,13 @@
 -------------------------------------------------------------------------------
 
 ---@class pdf.object.RectTextLike
----@field rect? pdf.object.RectLike
----@field text? string|pdf.object.TextLikeBase
+---@field rect? pdf.object.RectLike #custom rect configuration
+---@field text? string|pdf.object.TextLikeBase #custom text configuration
 ---@field align? pdf.common.Align #where to place the text relative to the rect, after padding factored
 ---@field margin? pdf.common.PaddingLike #padding applied to the rect bounds before the rect is created
 ---@field padding? pdf.common.PaddingLike #padding applied to the text within the rect before created
 
 ---Creates a group containing a rect and text overlayed on top.
----
----Supports configuring the text's alignment within the bounds of the rect.
 ---@param tbl pdf.object.RectTextLike
 ---@return pdf.object.Group
 function pdf.object.rect_text(tbl)
@@ -51,9 +49,9 @@ end
 ---@field month pdf.common.Date
 ---@field fill_color? pdf.common.ColorLike
 ---@field text_color? pdf.common.ColorLike
----@field date_to_link? fun(date:pdf.common.Date):(pdf.common.LinkLike|nil)
+---@field on_day_block? fun(opts:{date?:pdf.common.Date, group:pdf.object.Group})
 
----Creates a calendar-like object for the specified `month` that fits into `bounds`.
+---Creates a calendar-like group of objects for the specified `month` that fits into `bounds`.
 ---
 ---Calendar starts with Sunday as first day of the week.
 ---@param tbl pdf.object.CalendarArgs
@@ -62,7 +60,7 @@ function pdf.object.calendar(tbl)
     ---@type pdf.Object[]
     local objects = {}
     local month = tbl.month
-    local date_to_link = tbl.date_to_link
+    local on_day_block = tbl.on_day_block
 
     -- Text color for text placed on top of filled rects
     local fill_color = tbl.fill_color or pdf.page.fill_color
@@ -166,7 +164,12 @@ function pdf.object.calendar(tbl)
                 - (month_start_day_of_week - 1)
 
             -- Calculate date of day this represents, if valid
-            local date = is_valid_block and month:beginning_of_month():add_days(day_num - 1)
+            local date = is_valid_block
+                and month:beginning_of_month():add_days(day_num - 1)
+                or nil
+
+            -- Create a new, empty group to add date's objects
+            local group = pdf.object.group({})
 
             -- Create the container block for the day
             local block = cell_rect_text({
@@ -178,10 +181,9 @@ function pdf.object.calendar(tbl)
                     fill_color = is_valid_block and fill_color or invalid_fill_color,
                     outline_color = fill_color,
                     mode = is_valid_block and "stroke" or "fill_stroke",
-                    link = date and date_to_link and date_to_link(date) or nil,
                 }
             })
-            table.insert(objects, block)
+            table.insert(group, block)
 
             if is_valid_block then
                 -- Make a block with text that is a quarter of the size of the day block
@@ -195,8 +197,17 @@ function pdf.object.calendar(tbl)
                     rect = { ll = bounds.ll, ur = bounds.ur, fill_color = fill_color },
                     text = { text = tostring(day_num), color = text_color, }
                 }):align_to(block:bounds(), { v = "top", h = "left" })
-                table.insert(objects, day)
+                table.insert(group, day)
             end
+
+            if on_day_block then
+                on_day_block({
+                    date = date,
+                    group = group,
+                })
+            end
+
+            table.insert(objects, group)
         end
     end
 
