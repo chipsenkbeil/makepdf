@@ -192,16 +192,10 @@ function PdfBounds:height() end
 function PdfBounds:to_coords() end
 
 ---@class pdf.common.Color
+---@field red integer
+---@field green integer
+---@field blue integer
 local PdfColor = {}
-
----@type integer
-PdfColor.red = 0
-
----@type integer
-PdfColor.green = 0
-
----@type integer
-PdfColor.blue = 0
 
 ---Returns the luminance (brightness of the color) as a value between 0 and 1.
 ---@return number
@@ -226,30 +220,13 @@ function PdfColor:darken(percentage) end
 function PdfColor:__tostring() end
 
 ---@class pdf.common.Date
+---@field year integer
+---@field month integer # between 1 and 12
+---@field week integer # between 1 and 53 (last week of year differs by years)
+---@field weekday pdf.common.DateWeekday # weekday associated with the date
+---@field day integer # between 1 and 31
+---@field ordinal integer # between 1 and 366 (last day of year differs by years)
 local PdfDate = {}
-
----@type integer
-PdfDate.year = 0
-
----Between 1 and 12
----@type integer
-PdfDate.month = 0
-
----Between 1 and 53 (last week of year differs by years)
----@type integer
-PdfDate.week = 0
-
----Weekday associated with the date.
----@type pdf.common.DateWeekday
-PdfDate.weekday = {}
-
----Between 1 and 31
----@type integer
-PdfDate.day = 0
-
----Between 1 and 366 (last day of year differs by years)
----@type integer
-PdfDate.ordinal = 0
 
 ---Produces a string based on a formatting syntax from the chrono library.
 ---
@@ -381,19 +358,9 @@ function PdfDateWeekday:__tostring() end
 -------------------------------------------------------------------------------
 
 ---@class pdf.runtime.Page
+---@field id integer # unique id associated with the page.
+---@field date pdf.common.Date # date associated with page (daily is full, weekly is start of week, monthly is start of month)
 local PdfRuntimePage = {}
-
----Unique id associated with the page.
----@type integer
-PdfRuntimePage.id = 0
-
----Date associated with the page.
----
----For daily, this is the full date.
----For weekly, this is the start of the week.
----For monthly, this is the start of the month.
----@type pdf.common.Date
-PdfRuntimePage.date = {}
 
 ---Returns the daily page.
 ---
@@ -479,12 +446,9 @@ pdf.object = {}
 
 ---@class pdf.object.Group
 ---@field [number] pdf.Object
-local PdfObjectGroup = {
-    ---@type "group"
-    type = "group",
-    ---@type pdf.common.Link|nil
-    link = nil,
-}
+---@field type "group"
+---@field link pdf.common.Link|nil
+local PdfObjectGroup = {}
 
 ---Aligns the group to the provided bounds, returning an updated group.
 ---@param bounds pdf.common.Bounds
@@ -498,10 +462,7 @@ function PdfObjectGroup:bounds() end
 
 ---@class pdf.object.GroupLike
 ---@field [number] pdf.Object
-local PdfObjectGroupLike = {
-    ---@type pdf.common.LinkLike|nil
-    link = nil,
-}
+---@field link pdf.common.LinkLike|nil
 
 ---Creates a new group object.
 ---
@@ -513,20 +474,13 @@ function pdf.object.group(tbl) end
 
 ---@class pdf.object.Line
 ---@field [number] pdf.common.Point
-local PdfObjectLine = {
-    ---@type "line"
-    type = "line",
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.Color|nil
-    color = nil,
-    ---@type number|nil
-    thickness = nil,
-    ---@type pdf.object.line.Style|nil
-    style = nil,
-    ---@type pdf.common.Link|nil
-    link = nil,
-}
+---@field type "line"
+---@field depth integer|nil
+---@field color pdf.common.Color|nil
+---@field thickness number|nil
+---@field style pdf.object.line.Style|nil
+---@field link pdf.common.Link|nil
+local PdfObjectLine = {}
 
 ---Aligns the line to the provided bounds, returning an updated line.
 ---@param bounds pdf.common.Bounds
@@ -540,18 +494,11 @@ function PdfObjectLine:bounds() end
 
 ---@class pdf.object.LineLike
 ---@field [number] pdf.common.PointLike
-local PdfObjectLineLike = {
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.ColorLike|nil
-    color = nil,
-    ---@type number|nil
-    thickness = nil,
-    ---@type pdf.object.line.Style|nil
-    style = nil,
-    ---@type pdf.common.LinkLike|nil
-    link = nil,
-}
+---@field depth integer|nil
+---@field color pdf.common.ColorLike|nil
+---@field thickness number|nil
+---@field style pdf.object.line.Style|nil
+---@field link pdf.common.LinkLike|nil
 
 ---Creates a new line object.
 ---
@@ -560,28 +507,17 @@ local PdfObjectLineLike = {
 function pdf.object.line(tbl) end
 
 ---@class pdf.object.Rect
-local PdfObjectRect = {
-    ---@type "rect"
-    type = "rect",
-    ---@type pdf.common.Point
-    ll = {},
-    ---@type pdf.common.Point
-    ur = {},
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
-    ---@type number|nil
-    outline_thickness = nil,
-    ---@type pdf.common.PaintMode|nil
-    mode = nil,
-    ---@type pdf.common.WindingOrder|nil
-    order = nil,
-    ---@type pdf.common.Link|nil
-    link = nil,
-}
+---@field type "rect"
+---@field ll pdf.common.Point
+---@field ur pdf.common.Point
+---@field depth integer|nil
+---@field fill_color pdf.common.Color|nil
+---@field outline_color pdf.common.Color|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field link pdf.common.Link|nil
+local PdfObjectRect = {}
 
 ---Aligns the rect to the provided bounds, returning an updated rect.
 ---@param bounds pdf.common.Bounds
@@ -599,22 +535,13 @@ function PdfObjectRect:with_bounds(bounds) end
 function PdfObjectRect:bounds() end
 
 ---@class pdf.object.RectLikeBase
-local PdfObjectRectLikeBase = {
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.ColorLike|nil
-    fill_color = nil,
-    ---@type pdf.common.ColorLike|nil
-    outline_color = nil,
-    ---@type number|nil
-    outline_thickness = nil,
-    ---@type pdf.common.PaintMode|nil
-    mode = nil,
-    ---@type pdf.common.WindingOrder|nil
-    order = nil,
-    ---@type pdf.common.LinkLike|nil
-    link = nil,
-}
+---@field depth integer|nil
+---@field fill_color pdf.common.ColorLike|nil
+---@field outline_color pdf.common.ColorLike|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field link pdf.common.LinkLike|nil
 
 ---@class pdf.object.RectLike1: pdf.object.RectLikeBase
 ---@field ll {x:number, y:number}
@@ -644,24 +571,15 @@ function pdf.object.rect(tbl) end
 
 ---@class pdf.object.Shape
 ---@field [number] pdf.common.Point
-local PdfObjectShape = {
-    ---@type "shape"
-    type = "shape",
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.Color|nil
-    fill_color = nil,
-    ---@type pdf.common.Color|nil
-    outline_color = nil,
-    ---@type number|nil
-    outline_thickness = nil,
-    ---@type pdf.common.PaintMode|nil
-    mode = nil,
-    ---@type pdf.common.WindingOrder|nil
-    order = nil,
-    ---@type pdf.common.Link|nil
-    link = nil,
-}
+---@field type "shape"
+---@field depth integer|nil
+---@field fill_color pdf.common.Color|nil
+---@field outline_color pdf.common.Color|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field link pdf.common.Link|nil
+local PdfObjectShape = {}
 
 ---Aligns the shape to the provided bounds, returning an updated shape.
 ---@param bounds pdf.common.Bounds
@@ -675,22 +593,13 @@ function PdfObjectShape:bounds() end
 
 ---@class pdf.object.ShapeLike
 ---@field [number] pdf.common.PointLike
-local PdfObjectShapeLike = {
-    ---@type integer|nil
-    depth = nil,
-    ---@type pdf.common.ColorLike|nil
-    fill_color = nil,
-    ---@type pdf.common.ColorLike|nil
-    outline_color = nil,
-    ---@type number|nil
-    outline_thickness = nil,
-    ---@type pdf.common.PaintMode|nil
-    mode = nil,
-    ---@type pdf.common.WindingOrder|nil
-    order = nil,
-    ---@type pdf.common.LinkLike|nil
-    link = nil,
-}
+---@field depth integer|nil
+---@field fill_color pdf.common.ColorLike|nil
+---@field outline_color pdf.common.ColorLike|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field link pdf.common.LinkLike|nil
 
 ---Creates a new shape object.
 ---
@@ -699,26 +608,16 @@ local PdfObjectShapeLike = {
 function pdf.object.shape(tbl) end
 
 ---@class pdf.object.Text
-local PdfObjectText = {
-    ---@type "text"
-    type = "text",
-    ---@type number
-    x = 0,
-    ---@type number
-    y = 0,
-    ---@type string
-    text = "",
-    ---@type integer|nil
-    depth = nil,
-    ---@type integer|nil
-    font = nil,
-    ---@type number|nil
-    size = nil,
-    ---@type pdf.common.Color|nil
-    color = nil,
-    ---@type pdf.common.Link|nil
-    link = nil,
-}
+---@field type "text"
+---@field x number
+---@field y number
+---@field text string
+---@field depth integer|nil
+---@field font integer|nil
+---@field size number|nil
+---@field color pdf.common.Color|nil
+---@field link pdf.common.Link|nil
+local PdfObjectText = {}
 
 ---Aligns the text to the provided bounds, returning an updated text.
 ---@param bounds pdf.common.Bounds
@@ -736,20 +635,12 @@ function PdfObjectText:align_to(bounds, align) end
 function PdfObjectText:bounds() end
 
 ---@class pdf.object.TextLikeBase
-local PdfObjectTextLikeBase = {
-    ---@type string
-    text = "",
-    ---@type integer|nil
-    depth = nil,
-    ---@type integer|nil
-    font = nil,
-    ---@type number|nil
-    size = nil,
-    ---@type pdf.common.ColorLike|nil
-    color = nil,
-    ---@type pdf.common.LinkLike|nil
-    link = nil,
-}
+---@field text string
+---@field depth integer|nil
+---@field font integer|nil
+---@field size number|nil
+---@field color pdf.common.ColorLike|nil
+---@field link pdf.common.LinkLike|nil
 
 ---@class pdf.object.TextLike1: pdf.object.TextLikeBase
 ---@field x number
