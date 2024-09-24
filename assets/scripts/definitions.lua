@@ -841,6 +841,11 @@ function pdf.utils.bounds(tbl) end
 ---@return pdf.common.Color
 function pdf.utils.color(tbl) end
 
+---Creates a link instance, or throws an error if invalid.
+---@param tbl pdf.common.LinkLike
+---@return pdf.common.Link
+function pdf.utils.link(tbl) end
+
 ---Checks if two values are deeply equal, which involves recursively
 ---traversing tables.
 ---

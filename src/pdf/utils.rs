@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLuaExt};
+use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt};
 use mlua::prelude::*;
 use printpdf::{Mm, Pt};
 use tailcall::tailcall;
@@ -180,6 +180,8 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             "color",
             lua.create_function(|_, color: PdfColor| Ok(color))?,
         )?;
+
+        metatable.raw_set("link", lua.create_function(|_, link: PdfLink| Ok(link))?)?;
 
         metatable.raw_set(
             "deep_equal",
@@ -397,6 +399,38 @@ mod tests {
                     red = 1,
                     green = 2,
                     blue = 3,
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_value_to_link() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(u.link(123), {
+                    type = "goto",
+                    page = 123,
+                })
+                u.assert_deep_equal(u.link("https://example.com"), {
+                    type = "uri",
+                    uri = "https://example.com",
+                })
+                u.assert_deep_equal(u.link({
+                    type = "goto",
+                    page = 123,
+                }), {
+                    type = "goto",
+                    page = 123,
+                })
+                u.assert_deep_equal(u.link({
+                    type = "uri",
+                    uri = "https://example.com",
+                }), {
+                    type = "uri",
+                    uri = "https://example.com",
                 })
             })
             .exec()
