@@ -1,7 +1,4 @@
-use crate::pdf::{
-    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
-    PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfPaintMode, PdfVerticalAlign, PdfWindingOrder,
-};
+use crate::pdf::*;
 use mlua::prelude::*;
 use printpdf::Rect;
 
@@ -15,6 +12,9 @@ pub struct PdfObjectRect {
     pub outline_thickness: Option<f32>,
     pub mode: Option<PdfPaintMode>,
     pub order: Option<PdfWindingOrder>,
+    pub dash_pattern: Option<PdfLineDashPattern>,
+    pub cap_style: Option<PdfLineCapStyle>,
+    pub join_style: Option<PdfLineJoinStyle>,
     pub link: Option<PdfLink>,
 }
 
@@ -44,11 +44,20 @@ impl PdfObjectRect {
         let outline_thickness = self
             .outline_thickness
             .unwrap_or(ctx.config.page.outline_thickness);
+        let line_cap_style = self.cap_style.unwrap_or(ctx.config.page.line_cap_style);
+        let line_join_style = self.join_style.unwrap_or(ctx.config.page.line_join_style);
+        let line_dash_pattern = self
+            .dash_pattern
+            .unwrap_or(ctx.config.page.line_dash_pattern);
 
-        // Set the color and positioning of our rect
+        // Set layer configurations before adding the rect
         ctx.layer.set_fill_color(fill_color.into());
         ctx.layer.set_outline_color(outline_color.into());
         ctx.layer.set_outline_thickness(outline_thickness);
+        ctx.layer.set_line_cap_style(line_cap_style.into());
+        ctx.layer.set_line_join_style(line_join_style.into());
+        ctx.layer.set_line_dash_pattern(line_dash_pattern.into());
+
         ctx.layer.add_rect(Rect {
             ll: self.bounds.ll.into(),
             ur: self.bounds.ur.into(),
@@ -71,6 +80,9 @@ impl<'lua> IntoLua<'lua> for PdfObjectRect {
         table.raw_set("outline_thickness", self.outline_thickness)?;
         table.raw_set("mode", self.mode)?;
         table.raw_set("order", self.order)?;
+        table.raw_set("dash_pattern", self.dash_pattern)?;
+        table.raw_set("cap_style", self.cap_style)?;
+        table.raw_set("join_style", self.join_style)?;
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
@@ -125,6 +137,9 @@ impl<'lua> FromLua<'lua> for PdfObjectRect {
                     outline_thickness: table.raw_get_ext("outline_thickness")?,
                     mode: table.raw_get_ext("mode")?,
                     order: table.raw_get_ext("order")?,
+                    dash_pattern: table.raw_get_ext("dash_pattern")?,
+                    cap_style: table.raw_get_ext("cap_style")?,
+                    join_style: table.raw_get_ext("join_style")?,
                     link: table.raw_get_ext("link")?,
                 })
             }
@@ -293,6 +308,9 @@ mod tests {
                     outline_thickness = 456,
                     mode = "stroke",
                     order = "non_zero",
+                    dash_pattern = "dashed:999",
+                    cap_style = "butt",
+                    join_style = "miter",
                     link = {
                         type = "uri",
                         uri = "https://example.com",
@@ -308,6 +326,9 @@ mod tests {
                 outline_thickness: Some(456.0),
                 mode: Some(PdfPaintMode::stroke()),
                 order: Some(PdfWindingOrder::non_zero()),
+                dash_pattern: Some(PdfLineDashPattern::dashed(999)),
+                cap_style: Some(PdfLineCapStyle::butt()),
+                join_style: Some(PdfLineJoinStyle::miter()),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com"),
                 }),
@@ -343,6 +364,9 @@ mod tests {
             outline_thickness: Some(456.0),
             mode: Some(PdfPaintMode::stroke()),
             order: Some(PdfWindingOrder::non_zero()),
+            dash_pattern: Some(PdfLineDashPattern::dashed(999)),
+            cap_style: Some(PdfLineCapStyle::butt()),
+            join_style: Some(PdfLineJoinStyle::miter()),
             link: Some(PdfLink::Uri {
                 uri: String::from("https://example.com"),
             }),
@@ -359,6 +383,9 @@ mod tests {
                 outline_thickness = 456,
                 mode = "stroke",
                 order = "non_zero",
+                dash_pattern = { offset = 0, dash_1 = 999 },
+                cap_style = "butt",
+                join_style = "miter",
                 link = {
                     type = "uri",
                     uri = "https://example.com",

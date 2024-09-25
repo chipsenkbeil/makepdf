@@ -539,6 +539,9 @@ function pdf.object.line(tbl) end
 ---@field outline_thickness number|nil
 ---@field mode pdf.common.PaintMode|nil
 ---@field order pdf.common.WindingOrder|nil
+---@field dash_pattern pdf.common.line.DashPattern|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
 ---@field link pdf.common.Link|nil
 local PdfObjectRect = {}
 
@@ -564,6 +567,9 @@ function PdfObjectRect:bounds() end
 ---@field outline_thickness number|nil
 ---@field mode pdf.common.PaintMode|nil
 ---@field order pdf.common.WindingOrder|nil
+---@field dash_pattern pdf.common.line.DashPattern|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
 ---@field link pdf.common.LinkLike|nil
 
 ---@class pdf.object.RectLike1: pdf.object.RectLikeBase
