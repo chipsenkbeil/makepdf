@@ -6,7 +6,7 @@ mod text;
 mod r#type;
 
 pub use group::PdfObjectGroup;
-pub use line::{PdfObjectLine, PdfObjectLineStyle};
+pub use line::PdfObjectLine;
 pub use r#type::PdfObjectType;
 pub use rect::PdfObjectRect;
 pub use shape::PdfObjectShape;

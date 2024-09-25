@@ -1,13 +1,6 @@
-mod style;
-
-pub use style::PdfObjectLineStyle;
-
-use crate::pdf::{
-    PdfAlign, PdfBounds, PdfColor, PdfContext, PdfHorizontalAlign, PdfLink, PdfLinkAnnotation,
-    PdfLuaExt, PdfLuaTableExt, PdfObjectType, PdfPoint, PdfVerticalAlign,
-};
+use crate::pdf::*;
 use mlua::prelude::*;
-use printpdf::{Line, LineCapStyle, LineDashPattern};
+use printpdf::Line;
 
 /// Represents a line to be drawn in the PDF.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -16,7 +9,9 @@ pub struct PdfObjectLine {
     pub depth: Option<i64>,
     pub color: Option<PdfColor>,
     pub thickness: Option<f32>,
-    pub style: Option<PdfObjectLineStyle>,
+    pub dash_pattern: Option<PdfLineDashPattern>,
+    pub cap_style: Option<PdfLineCapStyle>,
+    pub join_style: Option<PdfLineJoinStyle>,
     pub link: Option<PdfLink>,
 }
 
@@ -93,23 +88,18 @@ impl PdfObjectLine {
         // Get optional values, setting defaults when not specified
         let outline_color = self.color.unwrap_or(ctx.config.page.outline_color);
         let thickness = self.thickness.unwrap_or(ctx.config.page.outline_thickness);
-        let style = self.style.unwrap_or(ctx.config.page.line_style);
+        let line_cap_style = self.cap_style.unwrap_or(ctx.config.page.line_cap_style);
+        let line_join_style = self.join_style.unwrap_or(ctx.config.page.line_join_style);
+        let line_dash_pattern = self
+            .dash_pattern
+            .unwrap_or(ctx.config.page.line_dash_pattern);
 
-        // Set the color and thickness of our line
+        // Set layer configurations before adding the line
         ctx.layer.set_outline_color(outline_color.into());
         ctx.layer.set_outline_thickness(thickness);
-
-        // If the line should be dashed, set the appropriate styling information,
-        // otherwise we reset to a default line dash pattern
-        if let PdfObjectLineStyle::Dashed = style {
-            ctx.layer.set_line_cap_style(LineCapStyle::Round);
-            ctx.layer.set_line_dash_pattern(LineDashPattern {
-                dash_1: Some(5),
-                ..Default::default()
-            });
-        } else {
-            ctx.layer.set_line_dash_pattern(LineDashPattern::default());
-        }
+        ctx.layer.set_line_cap_style(line_cap_style.into());
+        ctx.layer.set_line_join_style(line_join_style.into());
+        ctx.layer.set_line_dash_pattern(line_dash_pattern.into());
 
         ctx.layer.add_line(Line {
             points: self.points.iter().map(|p| ((*p).into(), false)).collect(),
@@ -133,7 +123,9 @@ impl<'lua> IntoLua<'lua> for PdfObjectLine {
         table.raw_set("depth", self.depth)?;
         table.raw_set("color", self.color)?;
         table.raw_set("thickness", self.thickness)?;
-        table.raw_set("style", self.style)?;
+        table.raw_set("dash_pattern", self.dash_pattern)?;
+        table.raw_set("cap_style", self.cap_style)?;
+        table.raw_set("join_style", self.join_style)?;
         table.raw_set("link", self.link)?;
 
         metatable.raw_set(
@@ -164,7 +156,9 @@ impl<'lua> FromLua<'lua> for PdfObjectLine {
                 depth: table.raw_get_ext("depth")?,
                 color: table.raw_get_ext("color")?,
                 thickness: table.raw_get_ext("thickness")?,
-                style: table.raw_get_ext("style")?,
+                dash_pattern: table.raw_get_ext("dash_pattern")?,
+                cap_style: table.raw_get_ext("cap_style")?,
+                join_style: table.raw_get_ext("join_style")?,
                 link: table.raw_get_ext("link")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
@@ -303,7 +297,9 @@ mod tests {
                     depth = 123,
                     color = "123456",
                     thickness = 456,
-                    style = "dashed",
+                    dash_pattern = "dashed:999",
+                    cap_style = "butt",
+                    join_style = "miter",
                     link = {
                         type = "uri",
                         uri = "https://example.com",
@@ -316,7 +312,9 @@ mod tests {
                 depth: Some(123),
                 color: Some("#123456".parse().unwrap()),
                 thickness: Some(456.0),
-                style: Some(PdfObjectLineStyle::Dashed),
+                dash_pattern: Some(PdfLineDashPattern::dashed(999)),
+                cap_style: Some(PdfLineCapStyle::butt()),
+                join_style: Some(PdfLineJoinStyle::miter()),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com"),
                 }),
@@ -350,7 +348,9 @@ mod tests {
                     depth = 123,
                     color = "123456",
                     thickness = 456,
-                    style = "dashed",
+                    dash_pattern = "dashed:999",
+                    cap_style = "butt",
+                    join_style = "miter",
                     link = {
                         type = "uri",
                         uri = "https://example.com",
@@ -366,7 +366,9 @@ mod tests {
                 depth: Some(123),
                 color: Some("#123456".parse().unwrap()),
                 thickness: Some(456.0),
-                style: Some(PdfObjectLineStyle::Dashed),
+                dash_pattern: Some(PdfLineDashPattern::dashed(999)),
+                cap_style: Some(PdfLineCapStyle::butt()),
+                join_style: Some(PdfLineJoinStyle::miter()),
                 link: Some(PdfLink::Uri {
                     uri: String::from("https://example.com"),
                 }),
@@ -400,7 +402,9 @@ mod tests {
             depth: Some(123),
             color: Some("#123456".parse().unwrap()),
             thickness: Some(456.0),
-            style: Some(PdfObjectLineStyle::Dashed),
+            dash_pattern: Some(PdfLineDashPattern::dashed(999)),
+            cap_style: Some(PdfLineCapStyle::butt()),
+            join_style: Some(PdfLineJoinStyle::miter()),
             link: Some(PdfLink::Uri {
                 uri: String::from("https://example.com"),
             }),
@@ -414,7 +418,9 @@ mod tests {
                 depth = 123,
                 color = { red = 18, green = 52, blue = 86 },
                 thickness = 456,
-                style = "dashed",
+                dash_pattern = { offset = 0, dash_1 = 999 },
+                cap_style = "butt",
+                join_style = "miter",
                 link = {
                     type = "uri",
                     uri = "https://example.com",
