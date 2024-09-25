@@ -39,9 +39,15 @@ pdf.page = {
     ---Default thickness of lines.
     ---@type number
     outline_thickness = 0,
-    ---Default style of lines.
-    ---@type pdf.object.line.Style
-    line_style = "solid",
+    ---Default dash pattern of lines.
+    ---@type pdf.common.line.DashPatternLike
+    dash_pattern = "solid",
+    ---Default cap style of lines.
+    ---@type pdf.common.line.CapStyle
+    cap_style = "round",
+    ---Default join style of lines.
+    ---@type pdf.common.line.JoinStyle
+    join_style = "round",
 }
 
 ---Returns the bounds covering the entire page.
@@ -85,6 +91,12 @@ pdf.planner = {
 ---@alias pdf.common.VerticalAlign "top"|"middle"|"bottom"
 ---@alias pdf.common.Padding {top:number, right:number, bottom:number, left:number}
 
+---@alias pdf.common.line.CapStyle "butt"|"round"|"projecting_square"
+---@alias pdf.common.line.JoinStyle "limit"|"miter"|"round"
+---@alias pdf.common.line.DashPatternLike
+---| string
+---| pdf.common.line.DashPattern
+
 ---@alias pdf.common.ColorLike
 ---| string
 ---| {[1]:integer, [2]:integer, [3]:integer}
@@ -116,6 +128,15 @@ pdf.planner = {
 ---| {[1]:number, [2]:number}
 ---| {[1]:number}
 ---| number
+
+---@class pdf.common.line.DashPattern
+---@field offset integer
+---@field dash_1 integer|nil
+---@field dash_2 integer|nil
+---@field dash_3 integer|nil
+---@field gap_1 integer|nil
+---@field gap_2 integer|nil
+---@field gap_3 integer|nil
 
 ---@class pdf.common.Bounds
 ---@field ll pdf.common.Point
@@ -470,15 +491,15 @@ function PdfObjectGroup:bounds() end
 ---@return pdf.object.Group
 function pdf.object.group(tbl) end
 
----@alias pdf.object.line.Style "dashed"|"solid"
-
 ---@class pdf.object.Line
 ---@field [number] pdf.common.Point
 ---@field type "line"
 ---@field depth integer|nil
 ---@field color pdf.common.Color|nil
 ---@field thickness number|nil
----@field style pdf.object.line.Style|nil
+---@field dash_pattern pdf.common.line.DashPattern|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
 ---@field link pdf.common.Link|nil
 local PdfObjectLine = {}
 
@@ -497,7 +518,9 @@ function PdfObjectLine:bounds() end
 ---@field depth integer|nil
 ---@field color pdf.common.ColorLike|nil
 ---@field thickness number|nil
----@field style pdf.object.line.Style|nil
+---@field dash_pattern pdf.common.line.DashPattern|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
 ---@field link pdf.common.LinkLike|nil
 
 ---Creates a new line object.
