@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLuaExt, PdfLuaTableExt, PdfObjectLineStyle};
+use crate::pdf::*;
 use mlua::prelude::*;
 use printpdf::{Mm, Px};
 
@@ -24,8 +24,12 @@ pub struct PdfConfigPage {
     pub outline_color: PdfColor,
     /// Default thickness for an outline when none specified.
     pub outline_thickness: f32,
-    /// Default style of loines when none specified.
-    pub line_style: PdfObjectLineStyle,
+    /// Default dash pattern of lines when none specified.
+    pub line_dash_pattern: PdfLineDashPattern,
+    /// Default cap style of lines when none specified.
+    pub line_cap_style: PdfLineCapStyle,
+    /// Default join style of lines when none specified.
+    pub line_join_style: PdfLineJoinStyle,
 }
 
 impl Default for PdfConfigPage {
@@ -42,7 +46,9 @@ impl Default for PdfConfigPage {
             fill_color: PdfColor::grey(),
             outline_color: PdfColor::black(),
             outline_thickness: 1.0,
-            line_style: PdfObjectLineStyle::Solid,
+            line_dash_pattern: PdfLineDashPattern::solid(),
+            line_cap_style: PdfLineCapStyle::round(),
+            line_join_style: PdfLineJoinStyle::round(),
         }
     }
 }
@@ -72,7 +78,9 @@ impl<'lua> IntoLua<'lua> for PdfConfigPage {
         table.raw_set("fill_color", self.fill_color)?;
         table.raw_set("outline_color", self.outline_color)?;
         table.raw_set("outline_thickness", self.outline_thickness)?;
-        table.raw_set("line_style", self.line_style)?;
+        table.raw_set("line_dash_pattern", self.line_dash_pattern)?;
+        table.raw_set("line_cap_style", self.line_cap_style)?;
+        table.raw_set("line_join_style", self.line_join_style)?;
 
         // Specialized helper functions
         metatable.raw_set(
@@ -100,7 +108,9 @@ impl<'lua> FromLua<'lua> for PdfConfigPage {
                 fill_color: table.raw_get_ext("fill_color")?,
                 outline_color: table.raw_get_ext("outline_color")?,
                 outline_thickness: table.raw_get_ext("outline_thickness")?,
-                line_style: table.raw_get_ext("line_style")?,
+                line_dash_pattern: table.raw_get_ext("line_dash_pattern")?,
+                line_cap_style: table.raw_get_ext("line_cap_style")?,
+                line_join_style: table.raw_get_ext("line_join_style")?,
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from: value.type_name(),
