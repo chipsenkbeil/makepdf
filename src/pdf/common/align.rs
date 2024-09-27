@@ -36,8 +36,8 @@ impl<'lua> FromLua<'lua> for PdfAlign {
         let from = value.type_name();
         match value {
             LuaValue::Table(tbl) => Ok(Self {
-                h: tbl.raw_get_ext("h")?,
-                v: tbl.raw_get_ext("v")?,
+                h: tbl.raw_get_ext::<_, Option<_>>("h")?.unwrap_or_default(),
+                v: tbl.raw_get_ext::<_, Option<_>>("v")?.unwrap_or_default(),
             }),
             _ => Err(LuaError::FromLuaConversionError {
                 from,
