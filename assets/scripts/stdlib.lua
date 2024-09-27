@@ -44,6 +44,83 @@ function pdf.object.rect_text(tbl)
     return pdf.object.group(objects)
 end
 
+---@class pdf.common.OutlineArgs
+---@field color? pdf.common.ColorLike
+---@field thickness? number
+---@field dash_pattern? pdf.common.line.DashPatternLike
+---@field cap_style? pdf.common.line.CapStyle
+---@field join_style? pdf.common.line.JoinStyle
+
+---@class pdf.object.SectionArgs
+---@field bounds pdf.common.Bounds
+---@field header? {text?:string, background?:pdf.common.ColorLike, foreground?:pdf.common.ColorLike, height?:number}
+---@field outline? pdf.common.OutlineArgs #configuration for the outline
+---@field padding? pdf.common.PaddingLike #padding applied to the items within the section
+---@field on_inner? fun(opts:{bounds:pdf.common.Bounds, group:pdf.object.Group})
+
+---Creates a section denoted by a header, outline, and items padded within.
+---
+---@param tbl pdf.object.SectionArgs
+---@return pdf.object.Group
+function pdf.object.section(tbl)
+    local objects = {}
+
+    local bounds = tbl.bounds
+    local header = tbl.header or {}
+    local outline = tbl.outline or {}
+    local padding = tbl.padding or {}
+    local on_inner = tbl.on_inner or function() end
+
+    local header_height = header.height
+        or pdf.object.text({ text = header.text or "" }):bounds():height()
+
+    -- First, we create a rect that fits the entire bounds with a stroke outline
+    -- specified (or page defaults)
+    table.insert(objects, pdf.object.rect({
+        mode = "stroke",
+        ll = bounds.ll,
+        ur = {
+            x = bounds.ur.x,
+            y = bounds.ur.y - header_height,
+        },
+        outline_color = outline.color,
+        outline_thickness = outline.thickness,
+        dash_pattern = outline.dash_pattern,
+        cap_style = outline.cap_style,
+        join_style = outline.join_style,
+    }))
+
+    -- Second, we create a header on top of the rect; if no height is
+    -- specified, we will use the height of the text
+    table.insert(objects, pdf.object.rect_text({
+        rect = {
+            mode = "fill",
+            ll = {
+                x = bounds.ll.x,
+                y = bounds.ur.y - header_height,
+            },
+            ur = bounds.ur,
+            fill_color = header.background,
+        },
+        text = {
+            text = header.text,
+            color = header.foreground,
+        },
+    }))
+
+    -- Third, we populate within the section using the callback
+    local group = pdf.object.group({})
+    on_inner({
+        bounds = bounds
+            :scale_to({ height = bounds:height() - header_height })
+            :with_padding(padding),
+        group = group
+    })
+    table.insert(objects, group)
+
+    return pdf.object.group(objects)
+end
+
 ---@class pdf.object.CalendarArgs
 ---@field bounds pdf.common.Bounds
 ---@field month pdf.common.Date
