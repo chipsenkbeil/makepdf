@@ -346,7 +346,8 @@ end
 ---Creates a grid of rows x columns for some bounds that can
 ---be used to create sub-bounds for cells within the grid.
 ---
----@param tbl {bounds:pdf.common.Bounds, rows:integer, columns:integer}
+---Takes optional padding to apply to each cell when retrieving bounds.
+---@param tbl {bounds:pdf.common.Bounds, rows:integer, columns:integer, padding?:pdf.common.PaddingLike}
 ---@return pdf.utils.Grid
 function pdf.utils.grid(tbl)
     local GRID_BOUNDS = tbl.bounds
@@ -356,6 +357,7 @@ function pdf.utils.grid(tbl)
     local NUM_COLS = tbl.columns
     local ROW_HEIGHT = GRID_HEIGHT / NUM_ROWS
     local COL_WIDTH = GRID_WIDTH / NUM_COLS
+    local CELL_PADDING = tbl.padding
 
     ---@class pdf.utils.Grid
     local M = {}
@@ -435,7 +437,7 @@ function pdf.utils.grid(tbl)
         return pdf.utils.bounds({
             ll = { x = ll.x + GRID_BOUNDS.ll.x, y = ll.y + GRID_BOUNDS.ll.y },
             ur = { x = ur.x + GRID_BOUNDS.ll.x, y = ur.y + GRID_BOUNDS.ll.y },
-        })
+        }):with_padding(CELL_PADDING)
     end
 
     ---Creates a function that maps the bounds of a cell into something else.
