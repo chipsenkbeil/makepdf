@@ -833,6 +833,11 @@ function pdf.utils.color(tbl) end
 ---@return pdf.common.Link
 function pdf.utils.link(tbl) end
 
+---Creates a padding instance, or throws an error if invalid.
+---@param tbl pdf.common.PaddingLike
+---@return pdf.common.Padding
+function pdf.utils.padding(tbl) end
+
 ---Creates a point instance, or throws an error if invalid.
 ---@param tbl pdf.common.PointLike
 ---@return pdf.common.Point

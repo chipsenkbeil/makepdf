@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt, PdfPoint};
+use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt, PdfPadding, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Mm, Pt};
 use tailcall::tailcall;
@@ -182,6 +182,11 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
         )?;
 
         metatable.raw_set("link", lua.create_function(|_, link: PdfLink| Ok(link))?)?;
+
+        metatable.raw_set(
+            "padding",
+            lua.create_function(|_, padding: PdfPadding| Ok(padding))?,
+        )?;
 
         metatable.raw_set(
             "point",
@@ -436,6 +441,22 @@ mod tests {
                 }), {
                     type = "uri",
                     uri = "https://example.com",
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_value_to_padding() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(u.padding({ 1, 2 }), {
+                    top = 1,
+                    right = 2,
+                    bottom = 1,
+                    left = 2,
                 })
             })
             .exec()
