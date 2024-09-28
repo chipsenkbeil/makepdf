@@ -83,7 +83,6 @@ pdf.planner = {
 -- COMMON TYPES
 -------------------------------------------------------------------------------
 
----@alias pdf.common.Point {x:number, y:number}
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
 ---@alias pdf.common.Align {h:pdf.common.HorizontalAlign, v:pdf.common.VerticalAlign}
@@ -163,6 +162,11 @@ function PdfBounds:align_to(bounds, align) end
 ---@param padding? pdf.common.PaddingLike
 ---@return pdf.common.Bounds
 function PdfBounds:with_padding(padding) end
+
+---Returns a copy of bounds with points rounded to precision.
+---@param precision integer
+---@return pdf.common.Bounds
+function PdfBounds:with_precision(precision) end
 
 ---Moves the bounds to the specified x & y position for the lower-left point,
 ---returning updated bounds.
@@ -374,6 +378,16 @@ function PdfDateWeekday:days_since(weekday) end
 ---@return string
 function PdfDateWeekday:__tostring() end
 
+---@class pdf.common.Point
+---@field x number
+---@field y number
+local PdfPoint = {}
+
+---Returns a copy of point with x & y rounded to precision.
+---@param precision integer
+---@return pdf.common.Point
+function PdfPoint:with_precision(precision) end
+
 -------------------------------------------------------------------------------
 -- RUNTIME TYPES
 -------------------------------------------------------------------------------
@@ -459,11 +473,58 @@ function pdf.hooks.on_weekly_page(f) end
 pdf.object = {}
 
 ---@alias pdf.Object
+---| pdf.object.Circle
 ---| pdf.object.Group
 ---| pdf.object.Line
 ---| pdf.object.Rect
 ---| pdf.object.Shape
 ---| pdf.object.Text
+
+---@class pdf.object.Circle
+---@field type "circle"
+---@field center pdf.common.Point
+---@field radius number
+---@field depth integer|nil
+---@field fill_color pdf.common.Color|nil
+---@field outline_color pdf.common.Color|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field dash_pattern pdf.common.line.DashPattern|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
+---@field link pdf.common.Link|nil
+local PdfObjectCircle = {}
+
+---Aligns the circle to the provided bounds, returning an updated circle.
+---@param bounds pdf.common.Bounds
+---@param align pdf.common.Align
+---@return pdf.object.Circle
+function PdfObjectCircle:align_to(bounds, align) end
+
+---Calculates the bounds that fully contains the circle.
+---@return pdf.common.Bounds
+function PdfObjectCircle:bounds() end
+
+---@class pdf.object.CircleLike
+---@field center pdf.common.PointLike|nil
+---@field radius number|nil
+---@field depth integer|nil
+---@field fill_color pdf.common.ColorLike|nil
+---@field outline_color pdf.common.ColorLike|nil
+---@field outline_thickness number|nil
+---@field mode pdf.common.PaintMode|nil
+---@field order pdf.common.WindingOrder|nil
+---@field dash_pattern pdf.common.line.DashPatternLike|nil
+---@field cap_style pdf.common.line.CapStyle|nil
+---@field join_style pdf.common.line.JoinStyle|nil
+---@field link pdf.common.LinkLike|nil
+
+---Creates a new shape object.
+---
+---@param tbl pdf.object.CircleLike
+---@return pdf.object.Circle
+function pdf.object.circle(tbl) end
 
 ---@class pdf.object.Group
 ---@field [number] pdf.Object
@@ -771,6 +832,11 @@ function pdf.utils.color(tbl) end
 ---@param tbl pdf.common.LinkLike
 ---@return pdf.common.Link
 function pdf.utils.link(tbl) end
+
+---Creates a point instance, or throws an error if invalid.
+---@param tbl pdf.common.PointLike
+---@return pdf.common.Point
+function pdf.utils.point(tbl) end
 
 ---Checks if two values are deeply equal, which involves recursively
 ---traversing tables.

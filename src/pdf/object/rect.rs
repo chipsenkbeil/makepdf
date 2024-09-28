@@ -2,7 +2,7 @@ use crate::pdf::*;
 use mlua::prelude::*;
 use printpdf::Rect;
 
-/// Represents a line to be drawn in the PDF.
+/// Represents a rectangle to be drawn in the PDF.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectRect {
     pub bounds: PdfBounds,
