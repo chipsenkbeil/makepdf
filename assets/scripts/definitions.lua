@@ -85,7 +85,7 @@ pdf.planner = {
 
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
----@alias pdf.common.Align {h:pdf.common.HorizontalAlign, v:pdf.common.VerticalAlign}
+---@alias pdf.common.Align {h?:pdf.common.HorizontalAlign, v?:pdf.common.VerticalAlign}
 ---@alias pdf.common.HorizontalAlign "left"|"middle"|"right"
 ---@alias pdf.common.VerticalAlign "top"|"middle"|"bottom"
 ---@alias pdf.common.Padding {top:number, right:number, bottom:number, left:number}

@@ -115,12 +115,22 @@ function pdf.object.section(tbl)
     return pdf.object.group(objects)
 end
 
+---@class pdf.object.LinedListArgs
+---@field bounds pdf.common.Bounds
+---@field rows string[]
+---@field align? pdf.common.Align
+---@field line_color? pdf.common.ColorLike
+---@field text_color? pdf.common.ColorLike
+
 ---Creates a group representing a series of lines pre-filled
 ---with the text provided within `rows`.
----@param tbl {bounds:pdf.common.Bounds, rows:string[], line_color?:pdf.common.ColorLike, text_color?:pdf.common.ColorLike}
+---
+---Defaults to aligning text vertically-centered and horizontally-left.
+---@param tbl pdf.object.LinedListArgs
 ---@return pdf.object.Group
 function pdf.object.lined_list(tbl)
     local objects = {}
+    local align = tbl.align or {}
     local bounds = tbl.bounds
     local rows = tbl.rows
     local grid = pdf.utils.grid({
@@ -146,7 +156,7 @@ function pdf.object.lined_list(tbl)
             local text = pdf.object.text({
                 text = rows[i],
                 color = tbl.text_color,
-            }):align_to(cell, { h = "left" })
+            }):align_to(cell, { h = align.h or "left", v = align.v })
             table.insert(objects, text)
         end
     end
