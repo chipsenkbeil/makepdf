@@ -8,7 +8,7 @@ use mlua::prelude::*;
 use owned_ttf_parser::{Face, GlyphId};
 use printpdf::{GlyphMetrics, Mm, Pt};
 
-/// Represents a line to be drawn in the PDF.
+/// Represents text to be drawn in the PDF.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectText {
     pub point: PdfPoint,

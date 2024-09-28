@@ -2,7 +2,7 @@ use crate::pdf::*;
 use mlua::prelude::*;
 use printpdf::Line;
 
-/// Represents a line to be drawn in the PDF.
+/// Represents one or more lines (by points) to be drawn in the PDF.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectLine {
     pub points: Vec<PdfPoint>,
