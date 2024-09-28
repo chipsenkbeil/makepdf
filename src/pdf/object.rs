@@ -1,3 +1,4 @@
+mod circle;
 mod group;
 mod line;
 mod rect;
@@ -5,6 +6,7 @@ mod shape;
 mod text;
 mod r#type;
 
+pub use circle::PdfObjectCircle;
 pub use group::PdfObjectGroup;
 pub use line::PdfObjectLine;
 pub use r#type::PdfObjectType;
@@ -17,6 +19,7 @@ use mlua::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PdfObject {
+    Circle(PdfObjectCircle),
     Group(PdfObjectGroup),
     Line(PdfObjectLine),
     Rect(PdfObjectRect),
@@ -28,6 +31,7 @@ impl PdfObject {
     /// Returns the type corresponding to the object.
     pub fn to_type(&self) -> PdfObjectType {
         match self {
+            Self::Circle(_) => PdfObjectType::Circle,
             Self::Group(_) => PdfObjectType::Group,
             Self::Line(_) => PdfObjectType::Line,
             Self::Rect(_) => PdfObjectType::Rect,
@@ -44,6 +48,7 @@ impl PdfObject {
     /// Returns bounds for the object, sometimes calculated using `ctx`.
     pub fn bounds(&self, ctx: PdfContext<'_>) -> PdfBounds {
         match self {
+            Self::Circle(x) => x.bounds(),
             Self::Group(x) => x.bounds(ctx),
             Self::Line(x) => x.bounds(),
             Self::Rect(x) => x.bounds,
@@ -56,6 +61,7 @@ impl PdfObject {
     /// is available.
     pub(crate) fn lua_bounds(&self, lua: &Lua) -> LuaResult<PdfBounds> {
         Ok(match self {
+            Self::Circle(x) => x.bounds(),
             Self::Group(x) => x.lua_bounds(lua)?,
             Self::Line(x) => x.bounds(),
             Self::Rect(x) => x.bounds,
@@ -67,6 +73,7 @@ impl PdfObject {
     /// Returns depth of the object with 0 being the default.
     pub fn depth(&self) -> i64 {
         match self {
+            Self::Circle(x) => x.depth,
             Self::Group(x) => Some(x.depth()),
             Self::Line(x) => x.depth,
             Self::Rect(x) => x.depth,
@@ -79,6 +86,7 @@ impl PdfObject {
     /// Returns a collection of link annotations.
     pub fn link_annotations(&self, ctx: PdfContext) -> Vec<PdfLinkAnnotation> {
         match self {
+            Self::Circle(x) => x.link_annotations(ctx),
             Self::Group(x) => x.link_annotations(ctx),
             Self::Line(x) => x.link_annotations(ctx),
             Self::Rect(x) => x.link_annotations(ctx),
@@ -90,12 +98,19 @@ impl PdfObject {
     /// Draws the object within the PDF.
     pub fn draw(&self, ctx: PdfContext<'_>) {
         match self {
+            Self::Circle(x) => x.draw(ctx),
             Self::Group(x) => x.draw(ctx),
             Self::Line(x) => x.draw(ctx),
             Self::Rect(x) => x.draw(ctx),
             Self::Shape(x) => x.draw(ctx),
             Self::Text(x) => x.draw(ctx),
         }
+    }
+}
+
+impl From<PdfObjectCircle> for PdfObject {
+    fn from(obj: PdfObjectCircle) -> Self {
+        Self::Circle(obj)
     }
 }
 
@@ -134,6 +149,7 @@ impl<'lua> IntoLua<'lua> for PdfObject {
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
         let ty = self.to_type_name();
         let value = match self {
+            Self::Circle(x) => x.into_lua(lua)?,
             Self::Group(x) => x.into_lua(lua)?,
             Self::Line(x) => x.into_lua(lua)?,
             Self::Rect(x) => x.into_lua(lua)?,
@@ -164,6 +180,10 @@ impl<'lua> FromLua<'lua> for PdfObject {
         match value {
             LuaValue::Table(table) => {
                 match table.raw_get_ext::<_, Option<PdfObjectType>>("type")? {
+                    Some(PdfObjectType::Circle) => Ok(Self::Circle(PdfObjectCircle::from_lua(
+                        LuaValue::Table(table),
+                        lua,
+                    )?)),
                     Some(PdfObjectType::Group) => Ok(Self::Group(PdfObjectGroup::from_lua(
                         LuaValue::Table(table),
                         lua,

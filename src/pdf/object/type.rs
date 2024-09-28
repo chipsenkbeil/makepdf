@@ -1,7 +1,9 @@
 use mlua::prelude::*;
 
+/// Type associated with a PDF object.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PdfObjectType {
+    Circle,
     Group,
     Line,
     Rect,
@@ -13,6 +15,7 @@ impl PdfObjectType {
     /// Return a static str representing the type of object.
     pub fn to_type_str(&self) -> &'static str {
         match self {
+            Self::Circle => "circle",
             Self::Group => "group",
             Self::Line => "line",
             Self::Rect => "rect",
@@ -24,6 +27,7 @@ impl PdfObjectType {
     /// Create type from string, returning `None` if not a valid type.
     pub fn from_type_str(s: &str) -> Option<Self> {
         match s {
+            "circle" => Some(Self::Circle),
             "group" => Some(Self::Group),
             "line" => Some(Self::Line),
             "rect" => Some(Self::Rect),
