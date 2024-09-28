@@ -1,4 +1,4 @@
-use crate::pdf::PdfLuaTableExt;
+use crate::pdf::{PdfLuaExt, PdfLuaTableExt};
 use mlua::prelude::*;
 use printpdf::{Mm, Point};
 
@@ -28,6 +28,16 @@ impl PdfPoint {
         Self::from_coords(Mm(x), Mm(y))
     }
 
+    /// Creates a copy of the point where the x & y coordinates have been
+    /// rounded to the specified `precision`.
+    pub fn to_precision(&self, precision: u32) -> Self {
+        let scale = 10_f32.powi(precision as i32);
+        Self::from_coords_f32(
+            (self.x.0 * scale).round() / scale,
+            (self.y.0 * scale).round() / scale,
+        )
+    }
+
     /// Converts point into (x, y).
     #[inline]
     pub const fn to_coords(&self) -> (Mm, Mm) {
@@ -49,6 +59,12 @@ impl PdfPoint {
     }
 }
 
+impl From<Point> for PdfPoint {
+    fn from(point: Point) -> Self {
+        Self::new(point.x.into(), point.y.into())
+    }
+}
+
 impl From<PdfPoint> for Point {
     fn from(point: PdfPoint) -> Self {
         Self::new(point.x, point.y)
@@ -58,8 +74,16 @@ impl From<PdfPoint> for Point {
 impl<'lua> IntoLua<'lua> for PdfPoint {
     #[inline]
     fn into_lua(self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-        let table = lua.create_table()?;
+        let (table, metatable) = lua.create_table_ext()?;
         self.add_to_table(&table)?;
+
+        metatable.raw_set(
+            "with_precision",
+            lua.create_function(|_, (this, precision): (Self, u32)| {
+                Ok(this.to_precision(precision))
+            })?,
+        )?;
+
         Ok(LuaValue::Table(table))
     }
 }
@@ -107,6 +131,31 @@ mod tests {
     use super::*;
     use crate::pdf::PdfUtils;
     use mlua::chunk;
+
+    #[test]
+    fn should_be_able_to_convert_to_specific_precision() {
+        let point = PdfPoint::from_coords_f32(0.1234567, 0.5678901);
+
+        assert_eq!(point.to_precision(0).to_coords_f32(), (0.0, 1.0));
+        assert_eq!(point.to_precision(1).to_coords_f32(), (0.1, 0.6));
+        assert_eq!(point.to_precision(2).to_coords_f32(), (0.12, 0.57));
+        assert_eq!(point.to_precision(3).to_coords_f32(), (0.123, 0.568));
+        assert_eq!(point.to_precision(4).to_coords_f32(), (0.1235, 0.5679));
+        assert_eq!(point.to_precision(5).to_coords_f32(), (0.12346, 0.56789));
+        assert_eq!(point.to_precision(6).to_coords_f32(), (0.123457, 0.567890));
+        assert_eq!(
+            point.to_precision(7).to_coords_f32(),
+            (0.1234567, 0.5678901)
+        );
+        assert_eq!(
+            point.to_precision(8).to_coords_f32(),
+            (0.1234567, 0.5678901)
+        );
+        assert_eq!(
+            point.to_precision(9).to_coords_f32(),
+            (0.1234567, 0.5678901)
+        );
+    }
 
     #[test]
     fn should_be_able_to_convert_from_lua() {

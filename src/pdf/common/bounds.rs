@@ -61,6 +61,15 @@ impl PdfBounds {
         PdfPoint::new(self.ur.x, self.ll.y)
     }
 
+    /// Creates a copy of the bounds where the points have been rounded to the specified
+    /// `precision`.
+    pub fn to_precision(&self, precision: u32) -> Self {
+        Self::new(
+            self.ll.to_precision(precision),
+            self.ur.to_precision(precision),
+        )
+    }
+
     /// Converts coordinates into bounds.
     #[inline]
     pub const fn from_coords(llx: Mm, lly: Mm, urx: Mm, ury: Mm) -> Self {
@@ -209,6 +218,13 @@ impl<'lua> IntoLua<'lua> for PdfBounds {
                     None => Ok(this),
                 },
             )?,
+        )?;
+
+        metatable.raw_set(
+            "with_precision",
+            lua.create_function(|_, (this, precision): (Self, u32)| {
+                Ok(this.to_precision(precision))
+            })?,
         )?;
 
         metatable.raw_set(
