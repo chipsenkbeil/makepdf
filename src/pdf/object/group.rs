@@ -95,6 +95,10 @@ impl PdfObjectGroup {
         // Apply the changes to all of the points
         for obj in self.objects.iter_mut() {
             match obj {
+                PdfObject::Circle(obj) => {
+                    obj.center.x += x_offset;
+                    obj.center.y += y_offset;
+                }
                 PdfObject::Group(obj) => {
                     obj.lua_align_to(lua, bounds, align)?;
                 }

@@ -92,6 +92,15 @@ impl Pdf {
         let (table, metatable) = lua.create_table_ext()?;
 
         metatable.raw_set(
+            "circle",
+            lua.create_function(|lua, tbl: LuaTable| {
+                PdfObjectCircle::from_lua(LuaValue::Table(tbl), lua)
+                    .map(PdfObject::Circle)?
+                    .into_lua(lua)
+            })?,
+        )?;
+
+        metatable.raw_set(
             "group",
             lua.create_function(|lua, tbl: LuaTable| {
                 PdfObjectGroup::from_lua(LuaValue::Table(tbl), lua)
