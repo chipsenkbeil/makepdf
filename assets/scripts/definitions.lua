@@ -83,7 +83,6 @@ pdf.planner = {
 -- COMMON TYPES
 -------------------------------------------------------------------------------
 
----@alias pdf.common.Point {x:number, y:number}
 ---@alias pdf.common.PaintMode "clip"|"fill"|"fill_stroke"|"stroke"
 ---@alias pdf.common.WindingOrder "even_odd"|"non_zero"
 ---@alias pdf.common.Align {h:pdf.common.HorizontalAlign, v:pdf.common.VerticalAlign}
@@ -163,6 +162,11 @@ function PdfBounds:align_to(bounds, align) end
 ---@param padding? pdf.common.PaddingLike
 ---@return pdf.common.Bounds
 function PdfBounds:with_padding(padding) end
+
+---Returns a copy of bounds with points rounded to precision.
+---@param precision integer
+---@return pdf.common.Bounds
+function PdfBounds:with_precision(precision) end
 
 ---Moves the bounds to the specified x & y position for the lower-left point,
 ---returning updated bounds.
@@ -373,6 +377,16 @@ function PdfDateWeekday:days_since(weekday) end
 ---Converts weekday into the long string form.
 ---@return string
 function PdfDateWeekday:__tostring() end
+
+---@class pdf.common.Point
+---@field x number
+---@field y number
+local PdfPoint = {}
+
+---Returns a copy of point with x & y rounded to precision.
+---@param precision integer
+---@return pdf.common.Point
+function PdfPoint:with_precision(precision) end
 
 -------------------------------------------------------------------------------
 -- RUNTIME TYPES
@@ -771,6 +785,11 @@ function pdf.utils.color(tbl) end
 ---@param tbl pdf.common.LinkLike
 ---@return pdf.common.Link
 function pdf.utils.link(tbl) end
+
+---Creates a point instance, or throws an error if invalid.
+---@param tbl pdf.common.PointLike
+---@return pdf.common.Point
+function pdf.utils.point(tbl) end
 
 ---Checks if two values are deeply equal, which involves recursively
 ---traversing tables.

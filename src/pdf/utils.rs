@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt};
+use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Mm, Pt};
 use tailcall::tailcall;
@@ -182,6 +182,11 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
         )?;
 
         metatable.raw_set("link", lua.create_function(|_, link: PdfLink| Ok(link))?)?;
+
+        metatable.raw_set(
+            "point",
+            lua.create_function(|_, point: PdfPoint| Ok(point))?,
+        )?;
 
         metatable.raw_set(
             "deep_equal",
@@ -431,6 +436,20 @@ mod tests {
                 }), {
                     type = "uri",
                     uri = "https://example.com",
+                })
+            })
+            .exec()
+            .expect("Assertion failed");
+    }
+
+    #[test]
+    fn should_support_converting_value_to_point() {
+        Lua::new()
+            .load(chunk! {
+                local u = $PdfUtils
+                u.assert_deep_equal(u.point({ 1, 2 }), {
+                    x = 1,
+                    y = 2,
                 })
             })
             .exec()
