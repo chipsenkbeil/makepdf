@@ -3,4 +3,5 @@
 *.pdf
 *.lua
 !assets/scripts/*.lua
+!examples/*.lua
 **/.DS_Store
