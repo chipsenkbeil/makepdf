@@ -2,7 +2,7 @@ use crate::pdf::*;
 use mlua::prelude::*;
 use printpdf::Polygon;
 
-/// Represents a line to be drawn in the PDF.
+/// Represents a polygonal shape to be drawn in the PDF.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PdfObjectShape {
     pub points: Vec<PdfPoint>,
@@ -100,7 +100,7 @@ impl PdfObjectShape {
             .dash_pattern
             .unwrap_or(ctx.config.page.line_dash_pattern);
 
-        // Set layer configurations before adding the rect
+        // Set layer configurations before adding the shape
         ctx.layer.set_fill_color(fill_color.into());
         ctx.layer.set_outline_color(outline_color.into());
         ctx.layer.set_outline_thickness(outline_thickness);
