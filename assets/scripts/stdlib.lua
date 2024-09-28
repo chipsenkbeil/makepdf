@@ -117,7 +117,7 @@ end
 
 ---Creates a group representing a series of lines pre-filled
 ---with the text provided within `rows`.
----@param tbl {bounds:pdf.common.Bounds, rows:string[]}
+---@param tbl {bounds:pdf.common.Bounds, rows:string[], line_color?:pdf.common.ColorLike, text_color?:pdf.common.ColorLike}
 ---@return pdf.object.Group
 function pdf.object.lined_list(tbl)
     local objects = {}
@@ -137,12 +137,16 @@ function pdf.object.lined_list(tbl)
         table.insert(objects, pdf.object.line({
             cell.ll,
             cell:lr(),
+            color = tbl.line_color,
         }))
 
         -- For our input rows, add them as text on top of the lines
         -- if they are not empty
         if type(rows[i]) == "string" and rows[i] ~= "" then
-            local text = pdf.object.text({ text = rows[i] }):align_to(cell, { h = "left" })
+            local text = pdf.object.text({
+                text = rows[i],
+                color = tbl.text_color,
+            }):align_to(cell, { h = "left" })
             table.insert(objects, text)
         end
     end
@@ -155,6 +159,7 @@ end
 ---@field month pdf.common.Date
 ---@field fill_color? pdf.common.ColorLike
 ---@field text_color? pdf.common.ColorLike
+---@field outline_thickness? number
 ---@field on_day_block? fun(opts:{date?:pdf.common.Date, group:pdf.object.Group})
 
 ---Creates a calendar-like group of objects for the specified `month` that fits into `bounds`.
@@ -171,6 +176,9 @@ function pdf.object.calendar(tbl)
     -- Text color for text placed on top of filled rects
     local fill_color = tbl.fill_color or pdf.page.fill_color
     local text_color = tbl.text_color
+
+    -- Default outline thickness of blocks to 1px (via 0)
+    local outline_thickness = tbl.outline_thickness or 0
 
     -- Determine default text color by lightness
     if not text_color then
@@ -286,6 +294,7 @@ function pdf.object.calendar(tbl)
                 rect = {
                     fill_color = is_valid_block and fill_color or invalid_fill_color,
                     outline_color = fill_color,
+                    outline_thickness = outline_thickness,
                     mode = is_valid_block and "stroke" or "fill_stroke",
                 }
             })
