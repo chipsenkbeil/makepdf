@@ -66,6 +66,7 @@ impl RuntimePages {
                 let date = PdfDate::beginning_of_month(year, i)
                     .with_context(|| format!("Failed to construct month {i} of year {year}"))?;
 
+                debug!("Adding monthly page: {}", date.format("%B %Y"));
                 pages.add_monthly_page(date);
             }
         }
@@ -77,6 +78,13 @@ impl RuntimePages {
                 .iter_weeks()
                 .take_while(|date| date.year() == year)
             {
+                debug!(
+                    "Adding weekly page: {}-{}",
+                    date.format("%B %d"),
+                    PdfDate::from(date)
+                        .into_end_of_week_monday()
+                        .format("%d %Y")
+                );
                 pages.add_weekly_page(date);
             }
         }
@@ -85,6 +93,7 @@ impl RuntimePages {
         if config.daily.enabled {
             info!("Building daily pages");
             for date in first_day.iter_days().take_while(|date| date <= &last_day) {
+                debug!("Adding daily page for {}", date.format("%B %d, %Y"));
                 pages.add_daily_page(date);
             }
         }
