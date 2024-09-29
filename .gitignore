@@ -4,3 +4,4 @@
 *.lua
 !assets/scripts/*.lua
 **/.DS_Store
+*.log

@@ -21,12 +21,13 @@ strip = true
 anyhow = "1.0.87"
 clap = { version = "4.5.17", features = ["derive"] }
 chrono = "0.4.38"
+log = "0.4.22"
+mlua = { version = "0.9.9", features = ["luau", "macros", "unstable"] }
 opener = "0.7.2"
 owned_ttf_parser = "0.24.0"
 palette = "0.7.6"
-mlua = { version = "0.9.9", features = ["luau", "macros", "unstable"] }
 phf = { version = "0.11.2", features = ["macros"] }
-#printpdf = "0.7.0"
 printpdf = { git = "https://github.com/chipsenkbeil/printpdf.git" }
 rand = "0.8.5"
+simplelog = "0.12.2"
 tailcall = "1.0.1"
