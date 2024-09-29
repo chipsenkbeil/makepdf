@@ -1,12 +1,27 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
+use log::*;
 use makepdf::{PdfConfig, PdfConfigPage, PdfConfigPlanner, Runtime};
+use simplelog::*;
+use std::fs::File;
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    /// Path to the log file to create and populate
+    #[arg(global = true, long, default_value_t = String::from("makepdf.log"))]
+    log_file: String,
+
+    /// If specified, suppresses all output
+    #[arg(global = true, short, long)]
+    quiet: bool,
+
+    /// Level of verbosity with -v showing info, -vv showing debug, and -vvv showing trace
+    #[arg(global = true, short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 #[derive(Debug, Subcommand)]
@@ -64,7 +79,44 @@ enum Commands {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    init_logger(&cli)?;
+    do_main(cli)
+}
 
+fn init_logger(cli: &Cli) -> anyhow::Result<()> {
+    // Figure out log level for the terminal, defaulting to warn and above
+    let term_log_level_filter = match (cli.quiet, cli.verbose) {
+        (true, _) => LevelFilter::Off,
+        (false, 0) => LevelFilter::Warn,
+        (false, 1) => LevelFilter::Info,
+        (false, 2) => LevelFilter::Debug,
+        (false, _) => LevelFilter::Trace,
+    };
+
+    // Figure out log level for the file, defaulting to info and above
+    let write_log_level_filter = match cli.verbose {
+        0 => LevelFilter::Info,
+        1 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    };
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            term_log_level_filter,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            write_log_level_filter,
+            Config::default(),
+            File::create(&cli.log_file).context("Failed to create log file")?,
+        ),
+    ])
+    .context("Failed to initialize logger")
+}
+
+fn do_main(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Make {
             dimensions,
@@ -120,6 +172,7 @@ fn main() -> anyhow::Result<()> {
 
             // If indicated, we try to open the PDF automatically
             if open {
+                info!("Opening {output}");
                 opener::open(&output).with_context(|| format!("Failed to open {output}"))?;
             }
 

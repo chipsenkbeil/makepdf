@@ -13,6 +13,7 @@ use script::RuntimeScript;
 use crate::constants::GLOBAL_PDF_VAR_NAME;
 use crate::pdf::{Pdf, PdfConfig, PdfContext, PdfLink};
 use anyhow::Context;
+use log::*;
 use std::collections::HashMap;
 
 /// PDF generation runtime, using `T` as a state machine to progress through a series of steps
@@ -38,11 +39,13 @@ impl Runtime<PdfConfig> {
         //    access and load new fonts into the system
         // 2. Hooks need to be configured as available before running our script as the script can
         //    access and register new hooks into the system
+        info!("Loading {}", config.script);
         let mut script =
             RuntimeScript::load_from_script(&config.script).context("Failed to load script")?;
         script.set_app_data(RuntimeHooks::new());
 
         // Initialize our fonts with the pre-configured font used as the fallback for now
+        info!("Initializing fonts");
         script.set_app_data({
             let mut fonts = RuntimeFonts::new();
 
@@ -70,6 +73,7 @@ impl Runtime<PdfConfig> {
             .context("Failed to initialize PDF script global")?;
 
         // Do the actual execution of the script
+        info!("Executing script");
         script.exec()?;
 
         // Retrieve the post-script PDF information
@@ -97,6 +101,7 @@ impl Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)> {
         let mut pages = RuntimePages::for_planner(&config.planner)?;
         let keys = pages.keys().collect::<Vec<_>>();
 
+        info!("Running hooks");
         for key in keys {
             // Get access to the current page to process with hooks
             if let Some(page) = pages.get_page(key) {
@@ -107,12 +112,15 @@ impl Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)> {
 
                 match page.kind {
                     RuntimePageKind::Daily => {
+                        debug!("Triggering daily page ({}) hook", page.date.format("%F"));
                         hooks.on_daily_page(page)?;
                     }
                     RuntimePageKind::Monthly => {
+                        debug!("Triggering monthly page ({}) hook", page.date.format("%F"));
                         hooks.on_monthly_page(page)?;
                     }
                     RuntimePageKind::Weekly => {
+                        debug!("Triggering weekly page ({}) hook", page.date.format("%F"));
                         hooks.on_weekly_page(page)?;
                     }
                 }
@@ -140,6 +148,7 @@ impl Runtime<(PdfConfig, RuntimePages, RuntimeFonts)> {
         let (width, height) = (config.page.width, config.page.height);
 
         // Create our actual PDF document (empty)
+        debug!("Initializing PDF document");
         let doc = RuntimeDoc::new(&config.title);
 
         // Load up our default font to pass into the draw context. We have already done this once,
@@ -157,10 +166,12 @@ impl Runtime<(PdfConfig, RuntimePages, RuntimeFonts)> {
 
         // Mark the fallback font, which may be the same as before, to ensure that it is used
         // everywhere like we expect when adding the objects on the PDF
+        debug!("Adding fallback font: {fallback_font_id}");
         fonts.add_font_as_fallback(fallback_font_id);
 
         // Attempt to add all the fonts to our document
         for id in fonts.to_ids() {
+            debug!("Adding external font: {id}");
             if !fonts.add_font_to_doc(id, doc.as_ref())? {
                 anyhow::bail!("Failed to add font {id} to PDF document");
             }
@@ -186,47 +197,61 @@ impl Runtime<(PdfConfig, RuntimePages, RuntimeFonts)> {
 
         // Draw all pages, which can be done in any order, by looking up the PDF references
         // based on the page's id
-        for page in pages {
-            if let Some((_, layer)) = refs.get(&page.id) {
-                let ctx = PdfContext {
-                    config: &config,
-                    layer,
-                    fonts: &fonts,
-                    fallback_font_id,
-                };
-
-                page.draw(ctx);
-
-                // Get annotations, sorted by depth, that we will add to our layer
-                let mut annotations = page.link_annotations(ctx);
-                annotations.sort_unstable_by(|a, b| a.depth.cmp(&b.depth));
-
-                for annotation in annotations {
-                    use printpdf::{Actions, Destination, LinkAnnotation};
-
-                    // Map our link to an action, which can be none if it's an invalid action
-                    // such as linking to a page that does not exist
-                    let action = match annotation.link {
-                        PdfLink::GoTo { page } => refs.get(&page).map(|x| x.0.page).map(|page| {
-                            Actions::go_to(Destination::XYZ {
-                                page,
-                                left: None,
-                                top: None,
-                                zoom: None,
-                            })
-                        }),
-                        PdfLink::Uri { uri } => Some(Actions::uri(uri)),
+        let page_cnt = pages.len();
+        info!("Building {} PDF pages", page_cnt);
+        for (i, page) in pages.into_iter().enumerate() {
+            debug!("Building page {} ({} / {})", page.id, i, page_cnt);
+            match refs.get(&page.id) {
+                None => warn!("Missing refs for page {}", page.id),
+                Some((_, layer)) => {
+                    let ctx = PdfContext {
+                        config: &config,
+                        layer,
+                        fonts: &fonts,
+                        fallback_font_id,
                     };
 
-                    // If we have an action, add an annotation for it
-                    if let Some(action) = action {
-                        layer.add_link_annotation(LinkAnnotation::new(
-                            annotation.bounds.into(),
-                            None,
-                            None,
-                            action,
-                            None,
-                        ));
+                    trace!("Drawing page {}", page.id);
+                    page.draw(ctx);
+
+                    // Get annotations, sorted by depth, that we will add to our layer
+                    let mut annotations = page.link_annotations(ctx);
+                    annotations.sort_unstable_by(|a, b| a.depth.cmp(&b.depth));
+
+                    trace!(
+                        "Processing {} annotations for page {}",
+                        annotations.len(),
+                        page.id
+                    );
+                    for annotation in annotations {
+                        use printpdf::{Actions, Destination, LinkAnnotation};
+
+                        // Map our link to an action, which can be none if it's an invalid action
+                        // such as linking to a page that does not exist
+                        let action = match annotation.link {
+                            PdfLink::GoTo { page } => {
+                                refs.get(&page).map(|x| x.0.page).map(|page| {
+                                    Actions::go_to(Destination::XYZ {
+                                        page,
+                                        left: None,
+                                        top: None,
+                                        zoom: None,
+                                    })
+                                })
+                            }
+                            PdfLink::Uri { uri } => Some(Actions::uri(uri)),
+                        };
+
+                        // If we have an action, add an annotation for it
+                        if let Some(action) = action {
+                            layer.add_link_annotation(LinkAnnotation::new(
+                                annotation.bounds.into(),
+                                None,
+                                None,
+                                action,
+                                None,
+                            ));
+                        }
                     }
                 }
             }
@@ -239,6 +264,9 @@ impl Runtime<(PdfConfig, RuntimePages, RuntimeFonts)> {
 impl Runtime<RuntimeDoc> {
     /// Saves the PDF to the specified `filename`.
     pub fn save(self, filename: impl Into<String>) -> anyhow::Result<()> {
+        let filename = filename.into();
+
+        info!("Saving PDF to {}", &filename);
         self.0.save(filename)
     }
 }
