@@ -9,6 +9,7 @@ pub use page::RuntimePage;
 use crate::pdf::{PdfConfigPlanner, PdfDate};
 use anyhow::Context;
 use chrono::Datelike;
+use log::*;
 use std::collections::HashMap;
 
 /// Manages a collection of pages.
@@ -60,6 +61,7 @@ impl RuntimePages {
 
         // Build the month pages (all empty)
         if config.monthly.enabled {
+            info!("Building monthly pages");
             for i in 1..=12 {
                 let date = PdfDate::beginning_of_month(year, i)
                     .with_context(|| format!("Failed to construct month {i} of year {year}"))?;
@@ -70,6 +72,7 @@ impl RuntimePages {
 
         // Build the weekly pages (all empty)
         if config.weekly.enabled {
+            info!("Building weekly pages");
             for date in first_day
                 .iter_weeks()
                 .take_while(|date| date.year() == year)
@@ -80,12 +83,23 @@ impl RuntimePages {
 
         // Build the daily pages (all empty)
         if config.daily.enabled {
+            info!("Building daily pages");
             for date in first_day.iter_days().take_while(|date| date <= &last_day) {
                 pages.add_daily_page(date);
             }
         }
 
         Ok(pages)
+    }
+
+    /// Returns the total number of pages.
+    pub fn len(&self) -> usize {
+        self.pages.len()
+    }
+
+    /// Returns `true` if pages is empty.
+    pub fn is_empty(&self) -> bool {
+        self.pages.is_empty()
     }
 
     /// Returns an iterator over the keys of the pages.

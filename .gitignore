@@ -5,3 +5,4 @@
 !assets/scripts/*.lua
 !examples/*.lua
 **/.DS_Store
+*.log
