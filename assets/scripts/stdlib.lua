@@ -11,11 +11,13 @@
 ---@field align? pdf.common.Align #where to place the text relative to the rect, after padding factored
 ---@field margin? pdf.common.PaddingLike #padding applied to the rect bounds before the rect is created
 ---@field padding? pdf.common.PaddingLike #padding applied to the text within the rect before created
+---@field link? pdf.common.LinkLike #link to associate with the object
 
 ---Creates a group containing a rect and text overlayed on top.
 ---@param tbl pdf.object.RectTextLike
 ---@return pdf.object.Group
 function pdf.object.rect_text(tbl)
+    ---@type pdf.object.GroupLike
     local objects = {}
 
     -- Create a rect from the provided configuration
@@ -39,6 +41,9 @@ function pdf.object.rect_text(tbl)
         )
         table.insert(objects, text)
     end
+
+    -- Associate a link with the group of objects
+    objects.link = tbl.link
 
     -- Build a group comprising the two together
     return pdf.object.group(objects)
