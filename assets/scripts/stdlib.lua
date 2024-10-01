@@ -623,3 +623,23 @@ function pdf.utils.grid(tbl)
 
     return M
 end
+
+---For a given date, returns the start and end of the week that is within
+---the same calendar year.
+---@param date pdf.common.DateLike
+---@return pdf.common.Date start_of_week, pdf.common.Date end_of_week
+function pdf.utils.start_end_week(date)
+    date = pdf.utils.date(date)
+
+    -- Figure out the start & end of the week that are within the calendar year
+    local start_of_week = assert(date:beginning_of_week_monday())
+    while start_of_week.year < date.year do
+        start_of_week = assert(start_of_week:tomorrow())
+    end
+    local end_of_week = assert(date:end_of_week_monday())
+    while end_of_week.year > date.year do
+        end_of_week = assert(end_of_week:yesterday())
+    end
+
+    return start_of_week, end_of_week
+end
