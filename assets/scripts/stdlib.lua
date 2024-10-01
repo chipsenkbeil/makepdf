@@ -5,6 +5,10 @@
 -- that are written in Lua. This is designed as faster turnaround than Rust.
 -------------------------------------------------------------------------------
 
+-------------------------------------------------------------------------------
+-- OBJECT ENHANCEMENTS
+-------------------------------------------------------------------------------
+
 ---@class pdf.object.RectTextLike
 ---@field rect? pdf.object.RectLike #custom rect configuration
 ---@field text? string|pdf.object.TextLikeBase #custom text configuration
@@ -345,7 +349,168 @@ function pdf.object.calendar(tbl)
 end
 
 -------------------------------------------------------------------------------
--- UTILS
+-- PAGES ENHANCEMENTS
+-------------------------------------------------------------------------------
+
+---Creates a series of pages representing a common planner, returning a mapping
+---of dates to pages.
+---@param opts? {year?:integer}
+---@return pdf.pages.Planner
+function pdf.pages.setup_planner(opts)
+    opts = opts or {}
+
+    -- Get the configured year
+    local year = opts.year or pdf.planner.year
+
+    -- Set our starting date for pages to beginning of the year
+    local start_date = pdf.utils.date({ year = year, month = 1, day = 1 })
+
+    ---@class pdf.pages.Planner
+    ---@field months {date:pdf.common.Date, id:pdf.runtime.PageId}[] # ids of pages for months (from 1 to 12)
+    ---@field weeks {date:pdf.common.Date, id:pdf.runtime.PageId}[] # ids of pages for weeks (from 1 up to 53)
+    ---@field days {date:pdf.common.Date, id:pdf.runtime.PageId}[] # ids of pages for days (from 1 up to 366)
+    local M = {
+        months = {},
+        weeks = {},
+        days = {},
+    }
+
+    ---Retrieves the monthly page for the given `date` or `id`.
+    ---@param date_or_id pdf.common.DateLike|pdf.runtime.PageId
+    ---@return pdf.runtime.Page|nil
+    function M:get_monthly_page(date_or_id)
+        if type(date_or_id) == "number" then
+            return pdf.pages.get(date_or_id)
+        else
+            ---@cast date_or_id -integer
+            local date = pdf.utils.date(date_or_id)
+            local page = self.months[date.month]
+            if page then
+                return pdf.pages.get(page.id)
+            end
+        end
+    end
+
+    ---Retrieves the weekly page for the given `date` or `id`.
+    ---@param date_or_id pdf.common.DateLike|pdf.runtime.PageId
+    ---@return pdf.runtime.Page|nil
+    function M:get_weekly_page(date_or_id)
+        if type(date_or_id) == "number" then
+            return pdf.pages.get(date_or_id)
+        else
+            ---@cast date_or_id -integer
+            local date = pdf.utils.date(date_or_id)
+            local page = self.weeks[date.week]
+            if page then
+                return pdf.pages.get(page.id)
+            end
+        end
+    end
+
+    ---Retrieves the daily page for the given `date` or `id`.
+    ---@param date_or_id pdf.common.DateLike|pdf.runtime.PageId
+    ---@return pdf.runtime.Page|nil
+    function M:get_daily_page(date_or_id)
+        if type(date_or_id) == "number" then
+            return pdf.pages.get(date_or_id)
+        else
+            ---@cast date_or_id -integer
+            local date = pdf.utils.date(date_or_id)
+            local page = self.days[date.ordinal]
+            if page then
+                return pdf.pages.get(page.id)
+            end
+        end
+    end
+
+    ---Executes some function for each monthly page created.
+    ---@param f fun(page:pdf.runtime.Page, date:pdf.common.Date)
+    function M:for_monthly_page(f)
+        for i = 1, 12 do
+            local x = self.months[i]
+            if x then
+                local page = pdf.pages.get(x.id)
+                if page then
+                    f(page, x.date)
+                end
+            end
+        end
+    end
+
+    ---Executes some function for each weekly page created.
+    ---@param f fun(page:pdf.runtime.Page, date:pdf.common.Date)
+    function M:for_weekly_page(f)
+        for i = 1, 53 do
+            local x = self.weeks[i]
+            if x then
+                local page = pdf.pages.get(x.id)
+                if page then
+                    f(page, x.date)
+                end
+            end
+        end
+    end
+
+    ---Executes some function for each daily page created.
+    ---@param f fun(page:pdf.runtime.Page, date:pdf.common.Date)
+    function M:for_daily_page(f)
+        for i = 1, 366 do
+            local x = self.days[i]
+            if x then
+                local page = pdf.pages.get(x.id)
+                if page then
+                    f(page, x.date)
+                end
+            end
+        end
+    end
+
+    -- Create monthly pages
+    if pdf.planner.monthly.enabled then
+        ---@type pdf.common.Date|nil
+        local date = start_date
+        while date and date.year == year do
+            -- e.g. January 2024
+            local id = pdf.pages.create(date:format("%B %Y"))
+            table.insert(M.months, { date = date, id = id })
+
+            date = date:next_month()
+        end
+    end
+
+    -- Create weekly pages
+    if pdf.planner.weekly.enabled then
+        ---@type pdf.common.Date|nil
+        local date = start_date
+
+        while date and date.year == year do
+            -- e.g. Week 1 2024
+            local id = pdf.pages.create(date:format("Week %V %Y"))
+            table.insert(M.weeks, { date = date, id = id })
+
+            date = date:next_week()
+        end
+    end
+
+    -- Create daily pages
+    if pdf.planner.daily.enabled then
+        ---@type pdf.common.Date|nil
+        local date = start_date
+
+        while date and date.year == year do
+            -- e.g. 2024-09-15 (Sunday)
+            local id = pdf.pages.create(date:format("%v (%A)"))
+            table.insert(M.days, { date = date, id = id })
+
+            date = date:tomorrow()
+        end
+    end
+
+    return M
+end
+
+-------------------------------------------------------------------------------
+-- UTILS ENHANCEMENTS
 -------------------------------------------------------------------------------
 
 ---Creates a grid of rows x columns for some bounds that can
