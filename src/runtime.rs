@@ -1,13 +1,11 @@
 mod doc;
 mod fonts;
-mod hooks;
 mod pages;
 mod script;
 
 pub use doc::RuntimeDoc;
 pub use fonts::{RuntimeFontId, RuntimeFonts};
-pub use hooks::RuntimeHooks;
-use pages::*;
+pub(crate) use pages::*;
 use script::RuntimeScript;
 
 use crate::constants::GLOBAL_PDF_VAR_NAME;
@@ -30,7 +28,7 @@ impl Runtime<()> {
 impl Runtime<PdfConfig> {
     /// Runs the configured Lua script to setup the final configuration and register hooks to
     /// process pages of the PDF among other things.
-    pub fn setup(self) -> anyhow::Result<Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)>> {
+    pub fn setup(self) -> anyhow::Result<Runtime<(PdfConfig, RuntimePages, RuntimeFonts)>> {
         let config = self.0;
 
         // Initialize a script and relevant application data
@@ -39,10 +37,12 @@ impl Runtime<PdfConfig> {
         //    access and load new fonts into the system
         // 2. Hooks need to be configured as available before running our script as the script can
         //    access and register new hooks into the system
+        // 3. Pages need to be configured as available before running our script as the script can
+        //    access and add new pages into the system
         info!("Loading {}", config.script);
         let mut script =
             RuntimeScript::load_from_script(&config.script).context("Failed to load script")?;
-        script.set_app_data(RuntimeHooks::new());
+        script.set_app_data(RuntimePages::new());
 
         // Initialize our fonts with the pre-configured font used as the fallback for now
         info!("Initializing fonts");
@@ -81,63 +81,17 @@ impl Runtime<PdfConfig> {
             .get_global(GLOBAL_PDF_VAR_NAME)
             .context("Failed to retrieve PDF information post-script execution")?;
 
-        // Retrieve the hooks to process
-        let hooks: RuntimeHooks = script
+        // Retrieve the pages to process
+        let pages: RuntimePages = script
             .remove_app_data()
-            .context("Missing hooks post-script execution")?;
+            .context("Missing pages post-script execution")?;
 
-        Ok(Runtime((pdf.config, script, hooks)))
-    }
-}
-
-impl Runtime<(PdfConfig, RuntimeScript, RuntimeHooks)> {
-    /// Runs the hooks that configure the pages to populate the PDF document.
-    pub fn run_hooks(self) -> anyhow::Result<Runtime<(PdfConfig, RuntimePages, RuntimeFonts)>> {
-        let (config, script, hooks) = self.0;
-
-        // Create a set of pages configured for the planner. These are not
-        // actually created within the doc yet, but are available for access
-        // by hooks in advance of us constructing the document.
-        let mut pages = RuntimePages::for_planner(&config.planner)?;
-        let keys = pages.keys().collect::<Vec<_>>();
-
-        info!("Running hooks");
-        for key in keys {
-            // Get access to the current page to process with hooks
-            if let Some(page) = pages.get_page(key) {
-                // Pages need to be configured as available before running our hooks as the
-                // hooks can access and manipulate pages. The hooks will potentially modify
-                // pages, so we will retrieve from our app data the pages once hooks are done.
-                script.set_app_data(pages);
-
-                match page.kind {
-                    RuntimePageKind::Daily => {
-                        debug!("Triggering daily page ({}) hook", page.date.format("%F"));
-                        hooks.on_daily_page(page)?;
-                    }
-                    RuntimePageKind::Monthly => {
-                        debug!("Triggering monthly page ({}) hook", page.date.format("%F"));
-                        hooks.on_monthly_page(page)?;
-                    }
-                    RuntimePageKind::Weekly => {
-                        debug!("Triggering weekly page ({}) hook", page.date.format("%F"));
-                        hooks.on_weekly_page(page)?;
-                    }
-                }
-
-                // Pull back out the pages from our global app data
-                // so we can use it to retrieve the next page
-                pages = script.remove_app_data().unwrap();
-            }
-        }
-
-        // Retrieve the fonts to pass on to the next stage. Should no longer need to be in the app
-        // data since we have nothing else to run in the script!
+        // Retrieve the fonts to process
         let fonts: RuntimeFonts = script
             .remove_app_data()
             .context("Missing fonts post-script execution")?;
 
-        Ok(Runtime((config, pages, fonts)))
+        Ok(Runtime((pdf.config, pages, fonts)))
     }
 }
 
@@ -177,22 +131,20 @@ impl Runtime<(PdfConfig, RuntimePages, RuntimeFonts)> {
             }
         }
 
-        // Create the month, week, and daily page instances (in order) based on our internal pages
+        // Create pages in order that they were added to ensure that they show up in the right
+        // order within the PDF itself
         let mut refs = HashMap::new();
-        for page in pages.iter_monthly_pages() {
-            // e.g. January 2024
-            let name = page.date.format("%B %Y").to_string();
-            refs.insert(page.id, doc.add_empty_page(width, height, &name));
-        }
-        for page in pages.iter_weekly_pages() {
-            // e.g. Week 1 2024
-            let name = page.date.format("Week %V %Y").to_string();
-            refs.insert(page.id, doc.add_empty_page(width, height, &name));
-        }
-        for page in pages.iter_daily_pages() {
-            // e.g. 2024-09-15 (Sunday)
-            let name = page.date.format("%v (%A)").to_string();
-            refs.insert(page.id, doc.add_empty_page(width, height, &name));
+        for id in pages.ids() {
+            if let Some(page) = pages.get_page(id) {
+                refs.insert(
+                    page.id,
+                    doc.add_empty_page(
+                        page.width.unwrap_or(width),
+                        page.height.unwrap_or(height),
+                        &page.title,
+                    ),
+                );
+            }
         }
 
         // Draw all pages, which can be done in any order, by looking up the PDF references

@@ -162,9 +162,7 @@ fn do_main(cli: Cli) -> anyhow::Result<()> {
             // 5. Save the PDF to disk
             Runtime::new(config)
                 .setup()
-                .context("Failed to setup PDF runtime")?
-                .run_hooks()
-                .context("Failed to run PDF hooks")?
+                .context("Failed to setup PDF")?
                 .build()
                 .context("Failed to build PDF")?
                 .save(&output)

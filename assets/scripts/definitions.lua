@@ -397,78 +397,15 @@ function PdfPoint:with_precision(precision) end
 -- RUNTIME TYPES
 -------------------------------------------------------------------------------
 
+---@alias pdf.runtime.PageId integer
+
 ---@class pdf.runtime.Page
----@field id integer # unique id associated with the page.
----@field date pdf.common.Date # date associated with page (daily is full, weekly is start of week, monthly is start of month)
+---@field id pdf.runtime.PageId # unique id associated with the page.
 local PdfRuntimePage = {}
-
----Returns the daily page.
----
----If no argument provided, returns the daily page for the current page.
----If a date or string is provided, returns the daily page for that date.
----@param date pdf.common.Date|string|nil
----@return pdf.runtime.Page|nil
-function PdfRuntimePage.daily(date) end
-
----Returns the monthly page.
----
----If no argument provided, returns the monthly page for the current page.
----If a date or string is provided, returns the monthly page for that date.
----@param date pdf.common.Date|string|nil
----@return pdf.runtime.Page|nil
-function PdfRuntimePage.monthly(date) end
-
----Returns the weekly page.
----
----If no argument provided, returns the weekly page for the current page.
----If a date or string is provided, returns the weekly page for that date.
----@param date pdf.common.Date|string|nil
----@return pdf.runtime.Page|nil
-function PdfRuntimePage.weekly(date) end
-
----Returns the next page in sequence.
----
----This is specifically the next page of the same kind (daily, weekly, monthly).
----@return pdf.runtime.Page|nil
-function PdfRuntimePage.next_page() end
-
----Returns the previous page in sequence.
----
----This is specifically the previous page of the same kind (daily, weekly, monthly).
----@return pdf.runtime.Page|nil
-function PdfRuntimePage.prev_page() end
 
 ---Pushes a new object onto the page to be rendered during PDF generation.
 ---@param obj pdf.Object
 function PdfRuntimePage.push(obj) end
-
--------------------------------------------------------------------------------
--- HOOKS FUNCTIONS
--------------------------------------------------------------------------------
-
----@class pdf.hooks
-pdf.hooks = {}
-
----Register new callback for when a daily page is created.
----
----This will append an additional callback on the stack, and
----can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.runtime.Page)
-function pdf.hooks.on_daily_page(f) end
-
----Register new callback for when a monthly page is created.
----
----This will append an additional callback on the stack, and
----can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.runtime.Page)
-function pdf.hooks.on_monthly_page(f) end
-
----Register new callback for when a weekly page is created.
----
----This will append an additional callback on the stack, and
----can be used multiple times to register multiple callbacks.
----@param f fun(page:pdf.runtime.Page)
-function pdf.hooks.on_weekly_page(f) end
 
 -------------------------------------------------------------------------------
 -- OBJECT FUNCTIONS
@@ -795,6 +732,27 @@ function pdf.font.ids() end
 ---@param id number
 ---@return string|nil path
 function pdf.font.path(id) end
+
+-------------------------------------------------------------------------------
+-- PAGES FUNCTIONS
+-------------------------------------------------------------------------------
+
+---@class pdf.pages
+pdf.pages = {}
+
+---Creates a new, blank page, adding it to the end of the pages list.
+---@param title string
+---@return pdf.runtime.PageId
+function pdf.pages.create(title) end
+
+---Retrieves a page with the specified id from the runtime collection.
+---@param id pdf.runtime.PageId
+---@return pdf.runtime.Page|nil
+function pdf.pages.get(id) end
+
+---Returns a list of page ids in the order they will show up in the PDF document.
+---@return pdf.runtime.PageId[]
+function pdf.pages.ids() end
 
 -------------------------------------------------------------------------------
 -- UTILITY FUNCTIONS
