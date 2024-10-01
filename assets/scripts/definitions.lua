@@ -128,6 +128,11 @@ pdf.planner = {
 ---| {[1]:number}
 ---| number
 
+---@alias pdf.common.DateLike
+---| string #representing a date in the form YYYY-MM-DD
+---| {year:integer, month:integer, day:integer}
+---| pdf.common.Date
+
 ---@class pdf.common.line.DashPattern
 ---@field offset integer
 ---@field dash_1 integer|nil
@@ -827,6 +832,11 @@ function pdf.utils.bounds(tbl) end
 ---@param tbl pdf.common.ColorLike
 ---@return pdf.common.Color
 function pdf.utils.color(tbl) end
+
+---Creates a date instance, or throws an error if invalid.
+---@param tbl pdf.common.DateLike
+---@return pdf.common.Date
+function pdf.utils.date(tbl) end
 
 ---Creates a link instance, or throws an error if invalid.
 ---@param tbl pdf.common.LinkLike

@@ -1,4 +1,4 @@
-use crate::pdf::{PdfBounds, PdfColor, PdfLink, PdfLuaExt, PdfPadding, PdfPoint};
+use crate::pdf::{PdfBounds, PdfColor, PdfDate, PdfLink, PdfLuaExt, PdfPadding, PdfPoint};
 use mlua::prelude::*;
 use printpdf::{Mm, Pt};
 use tailcall::tailcall;
@@ -180,6 +180,8 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
             "color",
             lua.create_function(|_, color: PdfColor| Ok(color))?,
         )?;
+
+        metatable.raw_set("date", lua.create_function(|_, date: PdfDate| Ok(date))?)?;
 
         metatable.raw_set("link", lua.create_function(|_, link: PdfLink| Ok(link))?)?;
 
