@@ -1,15 +1,15 @@
 mod common;
 mod config;
 mod context;
-mod hooks;
 mod object;
+mod pages;
 mod utils;
 
 pub use common::*;
 pub use config::*;
 pub use context::*;
-pub use hooks::*;
 pub use object::*;
+pub use pages::*;
 pub use utils::*;
 
 use crate::runtime::{RuntimeFontId, RuntimeFonts};
@@ -160,8 +160,8 @@ impl<'lua> IntoLua<'lua> for Pdf {
 
         // Add in the API instances to the base table
         table.raw_set("font", Pdf::create_font_table(lua)?)?;
-        table.raw_set("hooks", PdfHooks)?;
         table.raw_set("object", Pdf::create_object_table(lua)?)?;
+        table.raw_set("pages", PdfPages)?;
         table.raw_set("utils", PdfUtils)?;
 
         Ok(LuaValue::Table(table))

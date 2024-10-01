@@ -1,21 +1,27 @@
-use super::{RuntimePageKey, RuntimePageKind, RuntimePages};
-use crate::pdf::{PdfContext, PdfDate, PdfLinkAnnotation, PdfLuaExt, PdfObject};
+use crate::pdf::{PdfContext, PdfLinkAnnotation, PdfLuaExt, PdfObject};
 use mlua::prelude::*;
+use printpdf::Mm;
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock, Weak};
+
+/// Type of unique id associated with a page.
+pub type RuntimePageId = u32;
 
 /// Lua-only struct providing an interface for specialized operations within Lua to manipulate a
 /// PDF page.
 #[derive(Clone, Debug)]
 pub struct RuntimePage {
     /// Unique id associated with the page.
-    pub id: u32,
+    pub id: RuntimePageId,
 
-    /// Indicates the kind of page.
-    pub kind: RuntimePageKind,
+    /// Title associated with the page.
+    pub title: String,
 
-    /// Date associated with the page.
-    pub date: PdfDate,
+    /// Optional, explicit width of the page.
+    pub width: Option<Mm>,
+
+    /// Optional, explicit height of the page.
+    pub height: Option<Mm>,
 
     /// Collection of objects to add to the PDF.
     ///
@@ -24,20 +30,15 @@ pub struct RuntimePage {
 }
 
 impl RuntimePage {
-    /// Creates a new page of `kind` for the specified `date`.
-    pub fn new(kind: RuntimePageKind, date: PdfDate) -> Self {
+    /// Creates a new empty page.
+    pub fn new(title: impl Into<String>) -> Self {
         Self {
             id: rand::random(),
-            kind,
-            date,
+            title: title.into(),
+            width: None,
+            height: None,
             objects: Default::default(),
         }
-    }
-
-    /// Constructs a key associated with the page.
-    #[inline]
-    pub fn key(&self) -> RuntimePageKey {
-        (self.kind, self.date).into()
     }
 
     /// Returns a collection of link annotations associated with the page.
@@ -70,105 +71,9 @@ impl<'lua> IntoLua<'lua> for RuntimePage {
 
         let (table, metatable) = lua.create_table_ext()?;
         table.raw_set("id", self.id)?;
-        table.raw_set("date", self.date)?;
-
-        let kind = self.kind;
-        let year = self.date.year();
-        let date = self.date;
-
-        // Define a field function to get the monthly page for the current page (optionally taking
-        // a date). This will retrieve the page from the weak reference, upgrading it in the
-        // process, and can potentially return nil if no reference is found.
-        metatable.raw_set(
-            "monthly",
-            lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<RuntimePages>() {
-                    Some(pages) => maybe_date
-                        .or(Some(date))
-                        .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(RuntimePageKind::Monthly, date)),
-                    None => None,
-                })
-            })?,
-        )?;
-
-        // Define a field function to get the weekly page for the current page (optionally taking a
-        // date). This will retrieve the page from the weak reference, upgrading it in the process,
-        // and can potentially return nil if no reference is found.
-        metatable.raw_set(
-            "weekly",
-            lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<RuntimePages>() {
-                    Some(pages) => maybe_date
-                        .or(Some(date))
-                        .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(RuntimePageKind::Weekly, date)),
-                    None => None,
-                })
-            })?,
-        )?;
-
-        // Define a field function to get the daily page for the current page (optionally taking a
-        // date). This will retrieve the page from the weak reference, upgrading it in the process,
-        // and can potentially return nil if no reference is found.
-        metatable.raw_set(
-            "daily",
-            lua.create_function(move |lua, maybe_date: Option<PdfDate>| {
-                Ok(match lua.app_data_ref::<RuntimePages>() {
-                    Some(pages) => maybe_date
-                        .or(Some(date))
-                        .filter(|d| d.year() == year)
-                        .map(|date| pages.get_page_by_date(RuntimePageKind::Daily, date)),
-                    None => None,
-                })
-            })?,
-        )?;
-
-        // Define a field function to get the next page for the current page based on its type and
-        // date. This will retrieve the page from the weak reference, upgrading it in the process,
-        // and can potentially return nil if no reference is found.
-        metatable.raw_set(
-            "next_page",
-            lua.create_function(move |lua, ()| {
-                Ok(match lua.app_data_ref::<RuntimePages>() {
-                    Some(pages) => {
-                        let date = match kind {
-                            RuntimePageKind::Daily => date.tomorrow(),
-                            RuntimePageKind::Monthly => date.next_month(),
-                            RuntimePageKind::Weekly => date.next_week(),
-                        };
-
-                        // Ensure that we haven't created a date outside the calendar year
-                        date.filter(|d| d.year() == year)
-                            .and_then(|date| pages.get_page_by_date(kind, date))
-                    }
-                    None => None,
-                })
-            })?,
-        )?;
-
-        // Define a field function to get the previous page for the current page based on its type
-        // and date. This will retrieve the page from the weak reference, upgrading it in the
-        // process, and can potentially return nil if no reference is found.
-        metatable.raw_set(
-            "prev_page",
-            lua.create_function(move |lua, ()| {
-                Ok(match lua.app_data_ref::<RuntimePages>() {
-                    Some(pages) => {
-                        let date = match kind {
-                            RuntimePageKind::Daily => date.yesterday(),
-                            RuntimePageKind::Monthly => date.last_month(),
-                            RuntimePageKind::Weekly => date.last_week(),
-                        };
-
-                        // Ensure that we haven't created a date outside the calendar year
-                        date.filter(|d| d.year() == year)
-                            .and_then(|date| pages.get_page_by_date(kind, date))
-                    }
-                    None => None,
-                })
-            })?,
-        )?;
+        table.raw_set("title", self.title)?;
+        table.raw_set("width", self.width.map(|x| x.0))?;
+        table.raw_set("height", self.height.map(|x| x.0))?;
 
         // Define a field function that supports pushing any PDF object into a queue that will be
         // drawn for the current PDF page. The object's depth will be used to determine where in
