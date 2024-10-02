@@ -743,6 +743,33 @@ function pdf.font.ids() end
 function pdf.font.path(id) end
 
 -------------------------------------------------------------------------------
+-- LOG FUNCTIONS
+-------------------------------------------------------------------------------
+
+---@class pdf.log
+pdf.log = {}
+
+---Logs provided arguments as an error.
+---@param ... any
+function pdf.log.error(...) end
+
+---Logs provided arguments as a warning.
+---@param ... any
+function pdf.log.warn(...) end
+
+---Logs provided arguments as information.
+---@param ... any
+function pdf.log.info(...) end
+
+---Logs provided arguments as debug-level information.
+---@param ... any
+function pdf.log.debug(...) end
+
+---Logs provided arguments as trace-level information.
+---@param ... any
+function pdf.log.trace(...) end
+
+-------------------------------------------------------------------------------
 -- PAGES FUNCTIONS
 -------------------------------------------------------------------------------
 
