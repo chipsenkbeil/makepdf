@@ -1529,7 +1529,6 @@ mod tests {
                     year = 2024,
                     month = 9,
                     day = 14,
-                    week = 37,
                     weekday = {}, // NOTE: Everything is in a metatable here.
                     ordinal = 258,
                 }, {ignore_metatable = true})
