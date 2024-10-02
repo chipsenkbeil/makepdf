@@ -400,7 +400,7 @@ function pdf.pages.setup_planner(opts)
         else
             ---@cast date_or_id -integer
             local date = pdf.utils.date(date_or_id)
-            local page = self.weeks[date.week]
+            local page = self.weeks[date:calendar_week_monday()]
             if page then
                 return pdf.pages.get(page.id)
             end

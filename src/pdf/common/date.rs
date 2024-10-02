@@ -219,6 +219,46 @@ impl PdfDate {
     pub fn last_month(self) -> Option<Self> {
         self.add_months(-1)
     }
+
+    /// Returns the week where Sunday is the start of the week. The value can be between 1 and 53.
+    pub fn calendar_week_sunday(self) -> u32 {
+        let ordinal = self.0.ordinal0();
+        let first_day = NaiveDate::from_ymd_opt(self.0.year(), 1, 1).unwrap();
+        let first_day_weekday = first_day.weekday();
+
+        // Calculate the offset for the first Sunday of the year
+        let first_sunday_offset = match first_day_weekday {
+            Weekday::Sun => 0,
+            Weekday::Mon => 1,
+            Weekday::Tue => 2,
+            Weekday::Wed => 3,
+            Weekday::Thu => 4,
+            Weekday::Fri => 5,
+            Weekday::Sat => 6,
+        };
+
+        ((ordinal + first_sunday_offset) / 7) + 1
+    }
+
+    /// Returns the week where Monday is the start of the week. The value can be between 1 and 53.
+    pub fn calendar_week_monday(self) -> u32 {
+        let ordinal = self.0.ordinal0();
+        let first_day = NaiveDate::from_ymd_opt(self.0.year(), 1, 1).unwrap();
+        let first_day_weekday = first_day.weekday();
+
+        // Calculate the offset based on the first Monday of the year
+        let first_monday_offset = match first_day_weekday {
+            Weekday::Mon => 0,
+            Weekday::Tue => 1,
+            Weekday::Wed => 2,
+            Weekday::Thu => 3,
+            Weekday::Fri => 4,
+            Weekday::Sat => 5,
+            Weekday::Sun => 6,
+        };
+
+        ((ordinal + first_monday_offset) / 7) + 1
+    }
 }
 
 impl Deref for PdfDate {
@@ -271,7 +311,6 @@ impl<'lua> IntoLua<'lua> for PdfDate {
         table.raw_set("month", self.0.month())?;
         table.raw_set("day", self.0.day())?;
 
-        table.raw_set("week", self.0.iso_week().week())?;
         table.raw_set("weekday", self.weekday())?;
         table.raw_set("ordinal", self.0.ordinal())?;
 
@@ -405,6 +444,16 @@ impl<'lua> IntoLua<'lua> for PdfDate {
         )?;
 
         metatable.raw_set(
+            "calendar_week_sunday",
+            lua.create_function(move |_, this: PdfDate| Ok(this.calendar_week_sunday()))?,
+        )?;
+
+        metatable.raw_set(
+            "calendar_week_monday",
+            lua.create_function(move |_, this: PdfDate| Ok(this.calendar_week_sunday()))?,
+        )?;
+
+        metatable.raw_set(
             "__eq",
             lua.create_function(|_, (a, b): (PdfDate, PdfDate)| Ok(a.0 == b.0))?,
         )?;
@@ -450,8 +499,16 @@ impl<'lua> FromLua<'lua> for PdfDate {
 
                 match table.get_metatable() {
                     Some(metatable) => {
-                        let f = metatable.raw_get_ext::<_, LuaFunction>("__tostring")?;
-                        f.call(table)
+                        match metatable.raw_get_ext::<_, Option<LuaFunction>>("__tostring")? {
+                            Some(f) => f.call(table),
+                            None => Err(LuaError::FromLuaConversionError {
+                                from,
+                                to,
+                                message: Some(String::from(
+                                    "table does not have __tostring metatable method",
+                                )),
+                            }),
+                        }
                     }
                     None => Err(LuaError::FromLuaConversionError {
                         from,
@@ -1322,6 +1379,113 @@ mod tests {
                 .unwrap(),
             6
         );
+    }
+
+    #[test]
+    fn should_be_able_to_get_calendar_weeks_with_start_as_sunday() {
+        macro_rules! test {
+            (($year:expr, $month:expr, $day:expr), $expected:expr) => {{
+                let date = PdfDate(NaiveDate::from_ymd_opt($year, $month, $day).unwrap());
+                assert_eq!(date.calendar_week_sunday(), $expected);
+            }};
+        }
+
+        test!((2017, 1, 1), 1); // From a year that starts on a Sunday
+        test!((2018, 1, 1), 1); // From a year that starts on a Monday
+        test!((2019, 1, 1), 1); // From a year that starts on a Tuesday
+        test!((2020, 1, 1), 1); // From a year that starts on a Wednesday
+        test!((2015, 1, 1), 1); // From a year that starts on a Thursday
+        test!((2016, 1, 1), 1); // From a year that starts on a Friday
+        test!((2022, 1, 1), 1); // From a year that starts on a Saturday
+
+        test!((2017, 1, 7), 1); // First week ends on Saturday 7
+        test!((2017, 1, 8), 2); // Second week starts on Sunday 8
+
+        test!((2018, 1, 6), 1); // First week ends on Saturday 6
+        test!((2018, 1, 7), 2); // Second week starts on Sunday 7
+
+        test!((2019, 1, 5), 1); // First week ends on Saturday 5
+        test!((2019, 1, 6), 2); // Second week starts on Sunday 6
+
+        test!((2020, 1, 4), 1); // First week ends on Saturday 4
+        test!((2020, 1, 5), 2); // Second week starts on Sunday 5
+
+        test!((2015, 1, 3), 1); // First week ends on Saturday 3
+        test!((2015, 1, 4), 2); // Second week starts on Sunday 4
+
+        test!((2016, 1, 2), 1); // First week ends on Saturday 2
+        test!((2016, 1, 3), 2); // Second week starts on Sunday 3
+
+        test!((2022, 1, 1), 1); // First week ends on Saturday 1
+        test!((2022, 1, 2), 2); // Second week starts on Sunday 2
+
+        test!((2021, 1, 2), 1); // First week ends on Saturday 2
+        test!((2021, 1, 3), 2); // Second week starts on Sunday 3
+        test!((2021, 1, 9), 2); // Second week ends on Saturday 9
+        test!((2021, 1, 10), 3); // Third week starts on Sunday 10
+        test!((2021, 1, 16), 3); // Third week ends on Saturday 16
+        test!((2021, 1, 17), 4); // Fourth week starts on Sunday 17
+
+        test!((2017, 12, 31), 53); // From a year that ends on a Sunday (first week is only Jan 1)
+        test!((2018, 12, 31), 53); // From a year that ends on a Monday (last week is only Dec 31)
+        test!((2019, 12, 31), 53); // From a year that ends on a Tuesday (last week is Dec 30-31)
+        test!((2014, 12, 31), 53); // From a year that ends on a Wednesday (last week is Dec 29-31)
+        test!((2020, 12, 31), 53); // From a year that ends on a Thursday (last week is Dec 28-31)
+        test!((2021, 12, 31), 53); // From a year that ends on a Friday (last week is Dec 27-31)
+        test!((2016, 12, 31), 53); // From a year that ends on a Saturday (last week is Dec 26-31)
+    }
+
+    #[test]
+    fn should_be_able_to_get_calendar_weeks_with_start_as_monday() {
+        macro_rules! test {
+            (($year:expr, $month:expr, $day:expr), $expected:expr) => {{
+                let date = PdfDate(NaiveDate::from_ymd_opt($year, $month, $day).unwrap());
+                assert_eq!(date.calendar_week_monday(), $expected);
+            }};
+        }
+
+        test!((2017, 1, 1), 1); // From a year that starts on a Sunday
+        test!((2018, 1, 1), 1); // From a year that starts on a Monday
+        test!((2019, 1, 1), 1); // From a year that starts on a Tuesday
+        test!((2020, 1, 1), 1); // From a year that starts on a Wednesday
+        test!((2015, 1, 1), 1); // From a year that starts on a Thursday
+        test!((2016, 1, 1), 1); // From a year that starts on a Friday
+        test!((2022, 1, 1), 1); // From a year that starts on a Saturday
+
+        test!((2017, 1, 2), 2); // Second week starts on Monday 2
+
+        test!((2018, 1, 7), 1); // First week ends on Sunday 7
+        test!((2018, 1, 8), 2); // Second week starts on Monday 8
+
+        test!((2019, 1, 6), 1); // First week ends on Sunday 6
+        test!((2019, 1, 7), 2); // Second week starts on Monday 7
+
+        test!((2020, 1, 5), 1); // First week ends on Sunday 5
+        test!((2020, 1, 6), 2); // Second week starts on Monday 6
+
+        test!((2015, 1, 4), 1); // First week ends on Sunday 4
+        test!((2015, 1, 5), 2); // Second week starts on Saturday 5
+
+        test!((2016, 1, 3), 1); // First week ends on Sunday 3
+        test!((2016, 1, 4), 2); // Second week starts on Monday 4
+
+        test!((2022, 1, 2), 1); // First week ends on Sunday 2
+        test!((2022, 1, 3), 2); // Second week starts on Monday 3
+
+        test!((2021, 1, 3), 1); // First week ends on Sunday 3
+        test!((2021, 1, 4), 2); // Second week starts on Mon 4
+        test!((2021, 1, 10), 2); // Second week ends on Sunday 10
+        test!((2021, 1, 11), 3); // Third week starts on Mon 11
+        test!((2021, 1, 17), 3); // Third week ends on Sunday 17
+        test!((2021, 1, 18), 4); // Fourth week starts on Mon 18
+
+        test!((2017, 12, 31), 53); // From a year that ends on a Sunday (first week is only Jan 1)
+        test!((2018, 12, 31), 53); // From a year that ends on a Monday (last week is only Dec 31)
+        test!((2019, 12, 31), 53); // From a year that ends on a Tuesday (last week is Dec 30-31)
+        test!((2014, 12, 31), 53); // From a year that ends on a Wednesday (last week is Dec 29-31)
+        test!((2020, 12, 31), 53); // From a year that ends on a Thursday (last week is Dec 28-31)
+        test!((2021, 12, 31), 53); // From a year that ends on a Friday (last week is Dec 27-31)
+        test!((2016, 12, 31), 53); // From a year that ends on a Saturday (last week is Dec 26-31)
     }
 
     #[test]
