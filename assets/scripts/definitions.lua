@@ -252,9 +252,8 @@ function PdfColor:__tostring() end
 ---@class pdf.common.Date
 ---@field year integer
 ---@field month integer # between 1 and 12
----@field week integer # between 1 and 53 (last week of year differs by years)
----@field weekday pdf.common.DateWeekday # weekday associated with the date
 ---@field day integer # between 1 and 31
+---@field weekday pdf.common.DateWeekday # weekday associated with the date
 ---@field ordinal integer # between 1 and 366 (last day of year differs by years)
 local PdfDate = {}
 
@@ -330,6 +329,16 @@ function PdfDate:weeks_in_month_sunday() end
 ---Returns total calendar weeks the month of the date spans where beginning of week starts on Monday.
 ---@return integer
 function PdfDate:weeks_in_month_monday() end
+
+---Returns the calendar week within the year as a number from 1 to 53,
+---treating Sunday as the start of the week.
+---@return integer
+function PdfDate:calendar_week_sunday() end
+
+---Returns the calendar week within the year as a number from 1 to 53,
+---treating Monday as the start of the week.
+---@return integer
+function PdfDate:calendar_week_monday() end
 
 ---Converts date into a string in the format "YYYY-MM-DD".
 ---@return string
