@@ -35,9 +35,7 @@ impl Runtime<PdfConfig> {
         //
         // 1. Fonts need to be configured as available before running our script as the script can
         //    access and load new fonts into the system
-        // 2. Hooks need to be configured as available before running our script as the script can
-        //    access and register new hooks into the system
-        // 3. Pages need to be configured as available before running our script as the script can
+        // 2. Pages need to be configured as available before running our script as the script can
         //    access and add new pages into the system
         info!("Loading {}", config.script);
         let mut script =

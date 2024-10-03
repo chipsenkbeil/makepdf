@@ -55,31 +55,6 @@ pdf.page = {
 function pdf.page:bounds() end
 
 -------------------------------------------------------------------------------
--- PLANNER CONFIGURATION
--------------------------------------------------------------------------------
-
----@class pdf.planner
-pdf.planner = {
-    ---@type integer
-    year = 0,
-    ---@class pdf.planner.monthly
-    monthly = {
-        ---@type boolean
-        enabled = true,
-    },
-    ---@class pdf.planner.weekly
-    weekly = {
-        ---@type boolean
-        enabled = true,
-    },
-    ---@class pdf.planner.daily
-    daily = {
-        ---@type boolean
-        enabled = true,
-    },
-}
-
--------------------------------------------------------------------------------
 -- COMMON TYPES
 -------------------------------------------------------------------------------
 
@@ -836,6 +811,10 @@ function pdf.utils.date(tbl) end
 ---@param tbl pdf.common.LinkLike
 ---@return pdf.common.Link
 function pdf.utils.link(tbl) end
+
+---Returns the date for today.
+---@return pdf.common.Date
+function pdf.utils.now() end
 
 ---Creates a padding instance, or throws an error if invalid.
 ---@param tbl pdf.common.PaddingLike

@@ -354,13 +354,16 @@ end
 
 ---Creates a series of pages representing a common planner, returning a mapping
 ---of dates to pages.
----@param opts? {year?:integer}
+---
+---Accepts optional year, defaulting to the current year.
+---Monthly, weekly, and daily pages can be disabled by specifying as false.
+---@param opts? {year?:integer, monthly?:boolean, weekly?:boolean, daily?:boolean}
 ---@return pdf.pages.Planner
 function pdf.pages.setup_planner(opts)
     opts = opts or {}
 
     -- Get the configured year
-    local year = opts.year or pdf.planner.year
+    local year = opts.year or pdf.utils.now().year
 
     -- Set our starting date for pages to beginning of the year
     local start_date = pdf.utils.date({ year = year, month = 1, day = 1 })
@@ -466,7 +469,7 @@ function pdf.pages.setup_planner(opts)
     end
 
     -- Create monthly pages
-    if pdf.planner.monthly.enabled then
+    if type(opts.monthly) ~= "boolean" or opts.monthly then
         ---@type pdf.common.Date|nil
         local date = start_date
         while date and date.year == year do
@@ -479,7 +482,7 @@ function pdf.pages.setup_planner(opts)
     end
 
     -- Create weekly pages
-    if pdf.planner.weekly.enabled then
+    if type(opts.weekly) ~= "boolean" or opts.weekly then
         ---@type pdf.common.Date|nil
         local date = start_date
 
@@ -493,7 +496,7 @@ function pdf.pages.setup_planner(opts)
     end
 
     -- Create daily pages
-    if pdf.planner.daily.enabled then
+    if type(opts.daily) ~= "boolean" or opts.daily then
         ---@type pdf.common.Date|nil
         local date = start_date
 
