@@ -185,6 +185,8 @@ impl<'lua> IntoLua<'lua> for PdfUtils {
 
         metatable.raw_set("link", lua.create_function(|_, link: PdfLink| Ok(link))?)?;
 
+        metatable.raw_set("now", lua.create_function(|_, ()| Ok(PdfDate::now()))?)?;
+
         metatable.raw_set(
             "padding",
             lua.create_function(|_, padding: PdfPadding| Ok(padding))?,

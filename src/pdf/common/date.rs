@@ -5,7 +5,7 @@ pub use weekday::PdfDateWeekday;
 use crate::pdf::{PdfLuaExt, PdfLuaTableExt};
 use chrono::prelude::*;
 use chrono::Datelike;
-use chrono::{Days, Months};
+use chrono::{Days, Local, Months};
 use mlua::prelude::*;
 use std::cmp::Ordering;
 use std::fmt;
@@ -17,6 +17,11 @@ use std::str::FromStr;
 pub struct PdfDate(NaiveDate);
 
 impl PdfDate {
+    /// Returns a date representing now.
+    pub fn now() -> Self {
+        Self(Local::now().naive_local().date())
+    }
+
     /// Creates a date from a table with necessary fields.
     pub(crate) fn from_lua_table(table: &LuaTable) -> LuaResult<Self> {
         // Check if we have the necessary fields to construct a date
