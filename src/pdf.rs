@@ -14,6 +14,7 @@ pub use utils::*;
 
 use crate::runtime::{RuntimeFontId, RuntimeFonts};
 use mlua::prelude::*;
+use mlua::Variadic;
 
 /// Primary entrypoint for performing PDF operations.
 #[derive(Clone, Debug, Default)]
@@ -81,6 +82,62 @@ impl Pdf {
                 } else {
                     Err(LuaError::runtime("Runtime fonts are missing"))
                 }
+            })?,
+        )?;
+
+        Ok(table)
+    }
+
+    /// Creates a new Lua table that contains methods to log output.
+    fn create_log_table(lua: &Lua) -> LuaResult<LuaTable> {
+        let (table, metatable) = lua.create_table_ext()?;
+
+        #[inline]
+        fn make_arg_str(args: Variadic<LuaValue>) -> LuaResult<String> {
+            let mut args_str = Vec::new();
+            for arg in args.iter() {
+                args_str.push(arg.to_string()?);
+            }
+            Ok(args_str.join(" "))
+        }
+
+        metatable.raw_set(
+            "error",
+            lua.create_function(|_, args: Variadic<LuaValue>| {
+                log::error!("{}", make_arg_str(args)?);
+                Ok(())
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "warn",
+            lua.create_function(|_, args: Variadic<LuaValue>| {
+                log::warn!("{}", make_arg_str(args)?);
+                Ok(())
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "info",
+            lua.create_function(|_, args: Variadic<LuaValue>| {
+                log::info!("{}", make_arg_str(args)?);
+                Ok(())
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "debug",
+            lua.create_function(|_, args: Variadic<LuaValue>| {
+                log::debug!("{}", make_arg_str(args)?);
+                Ok(())
+            })?,
+        )?;
+
+        metatable.raw_set(
+            "trace",
+            lua.create_function(|_, args: Variadic<LuaValue>| {
+                log::trace!("{}", make_arg_str(args)?);
+                Ok(())
             })?,
         )?;
 
@@ -160,6 +217,7 @@ impl<'lua> IntoLua<'lua> for Pdf {
 
         // Add in the API instances to the base table
         table.raw_set("font", Pdf::create_font_table(lua)?)?;
+        table.raw_set("log", Pdf::create_log_table(lua)?)?;
         table.raw_set("object", Pdf::create_object_table(lua)?)?;
         table.raw_set("pages", PdfPages)?;
         table.raw_set("utils", PdfUtils)?;
