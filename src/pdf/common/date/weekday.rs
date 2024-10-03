@@ -218,7 +218,7 @@ impl<'lua> FromLua<'lua> for PdfDateWeekday {
             },
             _ => Err(LuaError::FromLuaConversionError {
                 from,
-                to: "pdf.common.date.weekday",
+                to,
                 message: None,
             }),
         }
