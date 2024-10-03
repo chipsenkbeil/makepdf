@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use log::*;
-use makepdf::{PdfConfig, PdfConfigPage, PdfConfigPlanner, Runtime};
+use makepdf::{PdfConfig, PdfConfigPage, Runtime};
 use simplelog::*;
 use std::fs::File;
 
@@ -67,13 +67,9 @@ enum Commands {
         #[arg(short, long, default_value_t = PdfConfig::default().script)]
         script: String,
 
-        /// Year to associate when running the PDF generation script.
+        /// Title of the PDF document.
         #[arg(long, default_value_t = PdfConfig::default().title)]
         title: String,
-
-        /// Year to associate when running the PDF generation script.
-        #[arg(long, default_value_t = PdfConfigPlanner::default().year)]
-        year: i32,
     },
 }
 
@@ -126,12 +122,11 @@ fn do_main(cli: Cli) -> anyhow::Result<()> {
             output,
             script,
             title,
-            year,
         } => {
             // Translate our dimensions into a width and height we will use for the PDF pages
             let (width, height) = PdfConfigPage::parse_size(&dimensions, dpi)?;
 
-            // If output is not specified, we will use the script's title with a .pdf extension
+            // If output is not specified, we will use the title with a .pdf extension
             let output = output.unwrap_or_else(|| {
                 format!("{}.pdf", title.replace(|c: char| !c.is_alphanumeric(), "_"))
             });
@@ -145,10 +140,6 @@ fn do_main(cli: Cli) -> anyhow::Result<()> {
                     height,
                     ..Default::default()
                 },
-                planner: PdfConfigPlanner {
-                    year,
-                    ..Default::default()
-                },
                 title,
                 script,
             };
@@ -157,9 +148,8 @@ fn do_main(cli: Cli) -> anyhow::Result<()> {
             //
             // 1. Creating a runtime for the given configuration
             // 2. Setup the configuration by running a Lua script to modify it
-            // 3. Run post-script hooks that will create internal pages & objects
-            // 4. Translate the internal pages & objects into the actual PDF
-            // 5. Save the PDF to disk
+            // 3. Translate the internal pages & objects into the actual PDF
+            // 4. Save the PDF to disk
             Runtime::new(config)
                 .setup()
                 .context("Failed to setup PDF")?

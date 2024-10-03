@@ -1,13 +1,10 @@
 mod page;
-mod planner;
 
 use crate::pdf::PdfLuaTableExt;
+use chrono::offset::Local;
 use mlua::prelude::*;
 
 pub use page::PdfConfigPage;
-pub use planner::{
-    PdfConfigDailyPlanner, PdfConfigMonthlyPlanner, PdfConfigPlanner, PdfConfigWeeklyPlanner,
-};
 
 /// Configuration for PDFs.
 ///
@@ -16,8 +13,6 @@ pub use planner::{
 pub struct PdfConfig {
     /// Configuration tied to a PDF page
     pub page: PdfConfigPage,
-    /// Configuration tied to a PDF planner
-    pub planner: PdfConfigPlanner,
     /// Path of script
     pub script: String,
     /// Title of the pdf document
@@ -27,14 +22,11 @@ pub struct PdfConfig {
 impl Default for PdfConfig {
     fn default() -> Self {
         let page = PdfConfigPage::default();
-        let planner = PdfConfigPlanner::default();
-        let year = planner.year;
 
         Self {
             page,
-            planner,
             script: String::from("makepdf.lua"),
-            title: format!("Planner {year}"),
+            title: Local::now().naive_local().date().to_string(),
         }
     }
 }
@@ -45,7 +37,6 @@ impl<'lua> IntoLua<'lua> for PdfConfig {
         let table = lua.create_table()?;
 
         table.raw_set("page", self.page)?;
-        table.raw_set("planner", self.planner)?;
         table.raw_set("script", self.script)?;
         table.raw_set("title", self.title)?;
 
@@ -59,7 +50,6 @@ impl<'lua> FromLua<'lua> for PdfConfig {
         match value {
             LuaValue::Table(table) => Ok(Self {
                 page: table.raw_get_ext("page")?,
-                planner: table.raw_get_ext("planner")?,
                 script: table.raw_get_ext("script").unwrap_or_default(),
                 title: table.raw_get_ext("title").unwrap_or_default(),
             }),
