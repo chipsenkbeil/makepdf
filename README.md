@@ -6,16 +6,13 @@ creating planners for e-ink devices.
 ## Usage
 
 ```sh
-# Make a planner for the current year using the default script (makepdf.lua)
+# Make a PDF using default script path of `makepdf.lua`
 makepdf make
 
-# Make a planner for the current year using the specified script
-makepdf make --script /path/to/script.lua
+# Make a PDF using a specific script path of `examples/planner.lua`
+makepdf make --script examples/planner.lua
 
-# Make a planner for a different year
-makepdf make --year 2035
-
-# Make a planner for a specific device dimensions
+# Make a planner for specific device dimensions
 makepdf make --dimensions 1404x1879px
 ```
 
