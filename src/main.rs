@@ -40,8 +40,7 @@ enum Commands {
         ///
         /// 3. `{WIDTH}x{HEIGHT}px` for pixels
         ///
-        /// Note the the DPI will influence conversion rates from pixels to
-        /// PDF millimeters.
+        /// Note that the DPI will influence conversion rates from pixels to PDF millimeters.
         #[arg(short, long, default_value_t = PdfConfigPage::default().to_px_size_string())]
         dimensions: String,
 

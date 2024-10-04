@@ -9,17 +9,6 @@ use std::path::{Path, PathBuf};
 /// retrieve a font face or a document's indirect font reference.
 pub type RuntimeFontId = u32;
 
-// TODO:
-//
-// 1. Fonts holds three things: faces, font indirect references, and default id
-// 2. Generate random id for each face loaded
-// 3. Support doc ref pass to function to get indirect font
-// 4. Ctx holds fonts ref
-// 5. Font field is id not str
-// 6. Fonts canonicalizes path and stores in map with font id to cache
-// 7. Store in app data to support `pdf.font.load()` returning id and adding to list
-//    and retrieving for text bounds
-
 /// Contains fonts used by the runtime.
 #[derive(Debug, Default)]
 pub struct RuntimeFonts {
