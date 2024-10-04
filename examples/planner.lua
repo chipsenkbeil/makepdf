@@ -1,7 +1,8 @@
 -------------------------------------------------------------------------------
 -- PLANNER
 --
--- Recreation of a physical planner that I often used.
+-- Recreation of a physical planner that I often used, specialized towards
+-- fitting the Supernote A6 X2 Nomad.
 -------------------------------------------------------------------------------
 
 -- GENERAL CONFIGURATION --
