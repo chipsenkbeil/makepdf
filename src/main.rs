@@ -29,7 +29,7 @@ enum Commands {
     /// Construct a PDF using a Luau (https://luau.org/) script, which is also compatible with Lua
     /// 5.1.
     Make {
-        /// Dimensions (WIDTHxHEIGHT to use for the PDF output,
+        /// Dimensions (WIDTHxHEIGHT) to use for the PDF output,
         /// defaulting to the Supernote A6 X2 Nomad.
         ///
         /// Can be in one of the following formats:
