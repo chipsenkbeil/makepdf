@@ -26,7 +26,7 @@ impl Default for PdfConfig {
         Self {
             page,
             script: String::from("makepdf.lua"),
-            title: Local::now().naive_local().date().to_string(),
+            title: format!("MakePDF {}", Local::now().naive_local().date()),
         }
     }
 }
