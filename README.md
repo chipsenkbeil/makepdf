@@ -129,6 +129,30 @@ page.push(pdf.object.rect({
 }))
 ```
 
+## Developer instructions
+
+### Working on the codebase
+
+Git can be used like most codebases, but I personally started using and enjoying
+[Sapling](https://sapling-scm.com/). My workflow involves:
+
+1. Clone the repository via `sl clone https://github.com/chipsenkbeil/makepdf.git`
+2. Make one or more stacked diffs
+3. Submit the diff stack via `sl pr submit -s`
+4. Merge in each pull request one at a time, running `sl pull && sl rebase -d
+   master && sl pr submit -s` to rebase inbetween each pull and update all of
+   the pull requests remaining
+
+### Publishing a new release
+
+Per this undocumented feature mentioned in this [tag feature
+request](https://github.com/facebook/sapling/issues/169), we can push a new
+release via `sl push --to tags/v0.1.0`.
+
+Until [support for explicit links](https://github.com/fschutt/printpdf/pull/186)
+is merged into `printpdf`, we cannot publish our crate to support `cargo install
+makepdf`.
+
 ## License
 
 This project is licensed under either of
