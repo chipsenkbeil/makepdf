@@ -10,9 +10,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-## [1.0.0] - 2024-10-05
+## [0.1.0] - 2024-10-05
 
 Initial release
 
-[Unreleased]: https://github.com/chipsenkbeil/makepdf/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/chipsenkbeil/makepdf/releases/tag/v1.0.0
+[Unreleased]: https://github.com/chipsenkbeil/makepdf/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/chipsenkbeil/makepdf/releases/tag/v0.1.0
