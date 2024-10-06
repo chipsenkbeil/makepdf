@@ -5,9 +5,15 @@ creating planners for e-ink devices.
 
 ## Installation
 
-```sh
-cargo install makepdf
-```
+### Prebuilt binary
+
+Grab the latest release from https://github.com/chipsenkbeil/makepdf/releases
+
+### From Source
+
+1. Clone the source locally (e.g. `git clone https://github.com/chipsenkbeil/makepdf.git`)
+2. Build the release via `cargo build --release`
+3. Copy the release file from `target/release/makepdf`
 
 ## Usage
 
