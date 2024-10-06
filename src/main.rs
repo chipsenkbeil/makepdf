@@ -82,9 +82,8 @@ fn init_logger(cli: &Cli) -> anyhow::Result<()> {
     // Figure out log level for the terminal, defaulting to warn and above
     let term_log_level_filter = match (cli.quiet, cli.verbose) {
         (true, _) => LevelFilter::Off,
-        (false, 0) => LevelFilter::Warn,
-        (false, 1) => LevelFilter::Info,
-        (false, 2) => LevelFilter::Debug,
+        (false, 0) => LevelFilter::Info,
+        (false, 1) => LevelFilter::Debug,
         (false, _) => LevelFilter::Trace,
     };
 
