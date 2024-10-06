@@ -11,9 +11,12 @@ Grab the latest release from https://github.com/chipsenkbeil/makepdf/releases
 
 ### From Source
 
-1. Clone the source locally (e.g. `git clone https://github.com/chipsenkbeil/makepdf.git`)
-2. Build the release via `cargo build --release`
-3. Copy the release file from `target/release/makepdf`
+Install Rust on your machine and use `cargo install` with the git repository
+specified in order to pull down, build, and install the binary:
+
+```sh
+cargo install --locked --git https://github.com/chipsenkbeil/makepdf.git
+```
 
 ## Usage
 
