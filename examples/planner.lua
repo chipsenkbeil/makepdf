@@ -291,10 +291,9 @@ end)
 -- WEEKLY PAGES
 -------------------------------------------------------------------------------
 
-planner:for_weekly_page(function(page, date)
-    local start_of_week, end_of_week = pdf.utils.start_end_week(date)
-    local week_str = date:format("%b %d") .. " to " .. end_of_week:format("%b %d")
-    pdf.log.debug("Populating weekly page", week_str .. date:format(" %Y"))
+planner:for_weekly_page(function(page, start_of_week, end_of_week)
+    local week_str = start_of_week:format("%b %d") .. " to " .. end_of_week:format("%b %d")
+    pdf.log.debug("Populating weekly page", week_str .. start_of_week:format(" %Y"))
 
     local grid = pdf.utils.grid({
         bounds = pdf.page:bounds():with_padding(PAGE_PADDING),
@@ -338,7 +337,7 @@ planner:for_weekly_page(function(page, date)
             bounds = grid.cell({ row = 1, col = 2, width = 2 }):with_padding(SPACING),
             text = week_str,
         }),
-        link = pdf.utils.link(planner:get_monthly_page(date).id),
+        link = pdf.utils.link(planner:get_monthly_page(start_of_week).id),
     }))
     page.push(make_daily_circles({
         bounds = grid.cell({ row = 1, col = 4, width = 4 }):with_padding(SPACING),

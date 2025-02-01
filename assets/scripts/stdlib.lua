@@ -441,14 +441,15 @@ function pdf.pages.setup_planner(opts)
     end
 
     ---Executes some function for each weekly page created.
-    ---@param f fun(page:pdf.runtime.Page, date:pdf.common.Date)
+    ---@param f fun(page:pdf.runtime.Page, start_of_week:pdf.common.Date, end_of_week:pdf.common.Date)
     function M:for_weekly_page(f)
         for i = 1, 53 do
             local x = self.weeks[i]
             if x then
                 local page = pdf.pages.get(x.id)
                 if page then
-                    f(page, x.date)
+                    local week_start, week_end = pdf.utils.start_end_week(x.date)
+                    f(page, week_start, week_end)
                 end
             end
         end
